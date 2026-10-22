@@ -1,7 +1,7 @@
 OMAT-SE
 
 Faceted search over materials composition and property measurements.
-Status: skeleton.
+Status: phase 0 — search UI on mock data.
 
 Repository
   apps/api       FastAPI service

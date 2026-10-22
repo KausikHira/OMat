@@ -1,74 +1,62 @@
-const planned = [
-  {
-    label: "Search",
-    detail: "BM25 over composition labels, properties, journals, and application groups.",
-  },
-  {
-    label: "Facets",
-    detail: "Element, property, journal, application, and year filters with live counts.",
-  },
-  {
-    label: "Records",
-    detail: "One document per measured property, grouped by paper and table number.",
-  },
-  {
-    label: "Charts",
-    detail: "Plotly distributions and trends fed by cached aggregation endpoints.",
-  },
-  {
-    label: "Chat",
-    detail: "Per-paper questions grounded in that paper's measurement rows.",
-  },
-  {
-    label: "MCP",
-    detail: "The same domain layer exposed to agents through the Python MCP SDK.",
-  },
-];
+import Link from "next/link";
 
-export default function Home() {
+import { SearchForm } from "@/components/search-form";
+import { ThemeToggle } from "@/components/theme-toggle";
+import { Wordmark } from "@/components/wordmark";
+import { datasetStats } from "@/lib/mock-records";
+import { buildSearchHref } from "@/lib/search";
+
+const examples = ["TiAlCrN", "LiFePO4", "band gap", "coatings"];
+
+export default function HomePage() {
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-5xl flex-col gap-16 px-6 py-20">
-      <header className="flex flex-col gap-5">
-        <p className="font-mono text-xs uppercase tracking-[0.3em] text-teal-300/80">
-          OMAT-SE · skeleton
-        </p>
-        <h1 className="max-w-3xl text-balance text-5xl font-semibold leading-[1.05] tracking-tight sm:text-6xl">
-          Search materials data by what it is and what it does.
-        </h1>
-        <p className="max-w-2xl text-pretty text-lg leading-relaxed text-slate-400">
-          A faceted search engine over composition and property measurements. The API, ingestion
-          pipeline, and index mapping are the next milestone.
-        </p>
-        <div className="flex flex-wrap items-center gap-3 pt-2 font-mono text-sm">
-          <a
-            className="rounded-md bg-teal-300 px-4 py-2 font-medium text-slate-950 transition hover:bg-teal-200"
-            href="http://localhost:8000/docs"
-          >
-            API docs
-          </a>
-          <span className="rounded-md border border-slate-800 px-4 py-2 text-slate-400">
-            GET /healthz
-          </span>
-        </div>
+    <div className="flex min-h-svh flex-col">
+      <header className="flex items-center justify-end px-5 py-5 sm:px-8">
+        <ThemeToggle />
       </header>
 
-      <section aria-labelledby="planned" className="flex flex-col gap-5">
-        <h2 id="planned" className="font-mono text-xs uppercase tracking-[0.25em] text-slate-500">
-          Planned surface
-        </h2>
-        <dl className="grid gap-px overflow-hidden rounded-lg border border-slate-800 bg-slate-800 sm:grid-cols-2 lg:grid-cols-3">
-          {planned.map((item) => (
-            <div key={item.label} className="flex flex-col gap-2 bg-slate-950/95 p-5">
-              <dt className="text-sm font-medium text-slate-200">{item.label}</dt>
-              <dd className="text-sm leading-relaxed text-slate-500">{item.detail}</dd>
-            </div>
-          ))}
-        </dl>
-      </section>
+      <main className="flex flex-1 flex-col items-center justify-center px-5 pb-20 pt-6">
+        <div className="w-full max-w-[44rem]">
+          <div className="flex flex-col items-center text-center">
+            <Wordmark size="lg" />
+            <p className="mt-5 max-w-[34rem] text-pretty text-[15px] leading-6 text-muted">
+              Search materials data by composition, property, journal, or application.
+            </p>
+          </div>
 
-      <footer className="mt-auto border-t border-slate-800 pt-6 font-mono text-xs text-slate-500">
-        Next.js · FastAPI · OpenSearch · Postgres · Redis · Plotly
+          <div className="mt-9">
+            <SearchForm autoFocus />
+          </div>
+
+          <div className="mt-5 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-[13px] text-muted">
+            <span>Try</span>
+            {examples.map((example) => (
+              <Link
+                key={example}
+                href={buildSearchHref({
+                  q: example,
+                  elements: [],
+                  applications: [],
+                  sort: "relevance",
+                })}
+                className="text-ink underline decoration-line-strong underline-offset-4 transition-colors hover:text-accent hover:decoration-accent"
+              >
+                {example}
+              </Link>
+            ))}
+          </div>
+
+          <p className="mt-14 text-center text-[11px] text-muted">
+            {datasetStats.records} measurement records across {datasetStats.journals} journals,{" "}
+            {datasetStats.from}–{datasetStats.to}.
+          </p>
+        </div>
+      </main>
+
+      <footer className="flex items-center justify-between px-5 py-6 text-[11px] text-muted sm:px-8">
+        <span>OMAT-SE</span>
+        <span>Phase 0 prototype</span>
       </footer>
-    </main>
+    </div>
   );
 }

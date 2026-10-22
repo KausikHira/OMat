@@ -1,11 +1,99 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
 :root {
+  --canvas: #f4efe4;
+  --panel: #faf6ec;
+  --ink: #1a1a16;
+  --muted: #635e51;
+  --line: #d8cfbd;
+  --line-strong: #bdb3a0;
+  --accent: #1f3fd1;
+  --accent-ink: #f8f6ff;
+  --selection: #d9defe;
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+  --canvas: #2a2b27;
+  --panel: #32332e;
+  --ink: #eeeade;
+  --muted: #b0aa9b;
+  --line: #41423b;
+  --line-strong: #54554c;
+  --accent: #b3c0ff;
+  --accent-ink: #17181b;
+  --selection: #3f4675;
   color-scheme: dark;
 }
 
-body {
-  background-image: radial-gradient(circle at 15% -10%, rgb(45 212 191 / 0.12), transparent 40%),
-    radial-gradient(circle at 85% 0%, rgb(129 140 248 / 0.1), transparent 35%);
-  background-repeat: no-repeat;
+@theme inline {
+  --color-canvas: var(--canvas);
+  --color-panel: var(--panel);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --font-sans: var(--font-instrument);
+  --font-display: var(--font-newsreader);
+}
+
+@layer base {
+  * {
+    border-color: var(--line);
+  }
+
+  html {
+    background: var(--canvas);
+  }
+
+  body {
+    min-height: 100svh;
+    background: var(--canvas);
+    color: var(--ink);
+    font-family: var(--font-instrument), ui-sans-serif, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  ::selection {
+    background: var(--selection);
+    color: var(--ink);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+  }
+
+  input::placeholder {
+    color: var(--muted);
+    opacity: 1;
+  }
+}
+
+.search-field {
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.search-field:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 16%, transparent);
+}
+
+.search-field input:focus-visible {
+  outline: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

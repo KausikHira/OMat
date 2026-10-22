@@ -32,6 +32,14 @@ class Settings(BaseSettings):
     gemini_api_key: str | None = None
     gemini_model: str | None = None
 
+    # External literature (Valency MCP). None/disabled = feature off, endpoints
+    # degrade gracefully instead of erroring.
+    valency_bearer_token: str | None = None
+    valency_mcp_url: str = "https://mcp.valency.io/"
+    valency_enabled: bool = True
+    valency_search_ttl: int = 900  # seconds
+    valency_trends_ttl: int = 86400
+
 
 @lru_cache
 def get_settings() -> Settings:

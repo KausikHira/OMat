@@ -27,7 +27,8 @@ def test_metallic_alloy_row():
 def test_oxide_species_expands_to_atoms():
     # Real glass row: species are oxides, Elements holds atoms.
     comp, warning = parse_composition(
-        "[('B2O3', 14.2, 'mol'), ('Li2O', 20.0, 'mol'), ('P2O5', 9.0, 'mol'), ('SiO2', 56.8, 'mol')]",
+        "[('B2O3', 14.2, 'mol'), ('Li2O', 20.0, 'mol'),"
+        " ('P2O5', 9.0, 'mol'), ('SiO2', 56.8, 'mol')]",
         "{'B', 'Li', 'O', 'P', 'Si'}",
     )
     assert warning is None  # the "mismatch" is expected, not an error

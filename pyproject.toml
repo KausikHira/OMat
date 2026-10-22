@@ -8,6 +8,8 @@ src = ["apps", "packages"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]
+# B008: function-call defaults ARE the FastAPI Depends() idiom.
+ignore = ["B008"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["omat_core", "omat_api", "omat_mcp", "omat_workers", "omat_ingest"]

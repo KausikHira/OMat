@@ -15,6 +15,7 @@ from omat_api.routers import (
     aggregates,
     chat,
     facets,
+    literature,
     papers,
     search,
     suggest,
@@ -43,7 +44,7 @@ def create_app() -> FastAPI:
         allow_methods=["GET", "POST", "OPTIONS"],
         allow_headers=["*"],
     )
-    for module in (search, papers, facets, aggregates, suggest, chat, admin):
+    for module in (search, papers, facets, aggregates, suggest, literature, chat, admin):
         application.include_router(module.router, prefix="/v1")
 
     @application.get("/healthz", tags=["ops"])

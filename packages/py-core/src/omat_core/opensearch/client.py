@@ -7,7 +7,8 @@ opensearch-py land at the call site.
 from __future__ import annotations
 
 import logging
-from typing import Any, Iterable
+from collections.abc import Iterable
+from typing import Any
 
 from opensearchpy import OpenSearch
 from opensearchpy.helpers import bulk
@@ -51,7 +52,9 @@ def _point_alias(client: OpenSearch, concrete: str) -> None:
     client.indices.update_aliases(body={"actions": actions})
 
 
-def bulk_index(client: OpenSearch, docs: Iterable[dict[str, Any]], chunk: int = 800) -> tuple[int, int]:
+def bulk_index(
+    client: OpenSearch, docs: Iterable[dict[str, Any]], chunk: int = 800,
+) -> tuple[int, int]:
     """Index docs against the alias. Returns (ok, failed)."""
     actions = (
         {"_index": ALIAS, "_id": doc["record_id"], "_source": doc} for doc in docs

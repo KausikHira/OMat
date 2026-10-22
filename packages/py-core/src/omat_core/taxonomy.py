@@ -114,7 +114,9 @@ def _load(dir_path: str) -> Taxonomy:
 
     units = yaml.safe_load((root / "units.yaml").read_text())["units"]
     for raw, spec in units.items():
-        taxonomy.units[raw] = UnitDef(raw=raw, si_unit=spec["si_unit"], factor=float(spec["factor"]))
+        taxonomy.units[raw] = UnitDef(
+            raw=raw, si_unit=spec["si_unit"], factor=float(spec["factor"]),
+        )
 
     journals = yaml.safe_load((root / "journals.yaml").read_text())["journals"]
     for doi_slug, spec in journals.items():

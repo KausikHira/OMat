@@ -19,7 +19,9 @@ def taxonomy():
 
 def test_doi_normalization():
     assert normalize_doi("10.1016/j.matlet.2020.129009") == "10.1016/j.matlet.2020.129009"
-    assert normalize_doi("https://doi.org/10.1016/J.MATLET.2020.129009") == "10.1016/j.matlet.2020.129009"
+    assert normalize_doi(
+        "https://doi.org/10.1016/J.MATLET.2020.129009"
+    ) == "10.1016/j.matlet.2020.129009"
     assert normalize_doi("S0167577X2031716X") is None
     assert normalize_doi("") is None
 

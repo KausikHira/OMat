@@ -90,7 +90,11 @@ def papers_mapping() -> dict[str, Any]:
                 "journal": {
                     "properties": {
                         "raw": {"type": "keyword", "ignore_above": 256},
-                        "name": {"type": "text", "analyzer": "omat_text", "fields": {"kw": {"type": "keyword"}}},
+                        "name": {
+                            "type": "text",
+                            "analyzer": "omat_text",
+                            "fields": {"kw": {"type": "keyword"}},
+                        },
                         "slug": {"type": "keyword"},
                     }
                 },

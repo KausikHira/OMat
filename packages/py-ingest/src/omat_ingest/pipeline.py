@@ -8,7 +8,6 @@ ast.literal_eval.
 from __future__ import annotations
 
 import csv
-import json
 import logging
 from collections.abc import Iterator
 from dataclasses import dataclass, field
@@ -33,7 +32,7 @@ from omat_core.normalize import (
     normalize_pii,
     year_from_doi,
 )
-from omat_core.taxonomy import Taxonomy, load_taxonomy
+from omat_core.taxonomy import Taxonomy
 
 logger = logging.getLogger(__name__)
 
@@ -63,7 +62,7 @@ def _reject(stats: IngestStats, rejects: list[Rejection], row_index: int,
             row_index=row_index,
             reason=reason,
             detail=detail,
-            row_preview={k: v for k, v in zip(COLUMNS, row) if len(row) > 0},
+            row_preview={k: v for k, v in zip(COLUMNS, row, strict=False) if len(row) > 0},
         )
     )
 
@@ -108,8 +107,14 @@ def row_to_record(
             _reject(stats, rejects, row_index, "bad_property_shape", repr(prop_raw), row)
             return None
         name, value, unit = prop_raw
-        if not isinstance(name, str) or not isinstance(value, (int, float)) or isinstance(value, bool):
-            _reject(stats, rejects, row_index, "bad_property_types", repr(prop_raw), row)
+        types_ok = (
+            isinstance(name, str)
+            and isinstance(value, (int, float))
+            and not isinstance(value, bool)
+        )
+        if not types_ok:
+            _reject(stats, rejects, row_index,
+                    "bad_property_types", repr(prop_raw)[:120], row)
             return None
         property_value = make_property_value(name, float(value), unit, taxonomy)
     elif isinstance(prop_raw, (list, tuple)) and not prop_raw:
@@ -212,7 +217,9 @@ def write_rejects(rejects: list[Rejection], out_dir: Path) -> Path:
     return out_path
 
 
-def run_validate(csv_path: Path, taxonomy: Taxonomy) -> tuple[IngestStats, list[Rejection], list[Record]]:
+def run_validate(
+    csv_path: Path, taxonomy: Taxonomy,
+) -> tuple[IngestStats, list[Rejection], list[Record]]:
     stats = IngestStats()
     rejects: list[Rejection] = []
     records = list(iter_records(csv_path, taxonomy, stats, rejects))

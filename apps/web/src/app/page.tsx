@@ -38,6 +38,8 @@ export default function HomePage() {
                   elements: [],
                   applications: [],
                   sort: "relevance",
+                  tab: "all",
+                  page: 1,
                 })}
                 className="text-ink underline decoration-line-strong underline-offset-4 transition-colors hover:text-accent hover:decoration-accent"
               >
@@ -53,9 +55,15 @@ export default function HomePage() {
         </div>
       </main>
 
-      <footer className="flex items-center justify-between px-5 py-6 text-[11px] text-muted sm:px-8">
-        <span>OMAT-SE</span>
-        <span>Phase 0 prototype</span>
+      <footer className="flex items-center px-5 py-6 text-[11px] text-muted sm:px-8">
+        <a
+          href="https://github.com/Jayesh-Dev21/Omat-se"
+          target="_blank"
+          rel="noreferrer noopener"
+          className="transition-colors hover:text-ink hover:underline underline-offset-4"
+        >
+          OMAT-SE
+        </a>
       </footer>
     </div>
   );

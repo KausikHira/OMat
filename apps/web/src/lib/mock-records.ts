@@ -1,3 +1,5 @@
+import { PAPER_METADATA } from "./paper-metadata";
+
 export type ElementAmount = {
   symbol: string;
   value: number;
@@ -30,9 +32,12 @@ export type Measurement = {
   amounts: ElementAmount[];
   property: PropertyValue;
   applications: Application[];
+  // Enrichment fields; absent from the CSV and populated by the API when available.
+  title?: string;
+  abstract?: string;
 };
 
-export const MEASUREMENTS: Measurement[] = [
+const RECORDS: Measurement[] = [
   {
     id: "S0167577X2031716X_0_1",
     pii: "S0167577X2031716X",
@@ -331,6 +336,11 @@ export const MEASUREMENTS: Measurement[] = [
     applications: [{ label: "Wear protection", slug: "wear-protection" }],
   },
 ];
+
+export const MEASUREMENTS: Measurement[] = RECORDS.map((record) => ({
+  ...record,
+  ...(PAPER_METADATA[record.doi] ?? {}),
+}));
 
 export const datasetStats = (() => {
   const years = MEASUREMENTS.map((record) => record.year);

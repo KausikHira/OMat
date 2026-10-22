@@ -45,6 +45,10 @@ export type ApiRecord = {
   journal?: ApiJournal;
   year?: number | null;
   applications?: { raw?: string; slug?: string }[];
+  // Enrichment fields; declared in the index mapping and optional until the
+  // enrichment pipeline has populated them.
+  title?: string;
+  abstract?: string;
 };
 
 export type SearchResponse = {

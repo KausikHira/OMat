@@ -9,7 +9,10 @@ type SearchFormProps = {
   defaultValue?: string;
   autoFocus?: boolean;
   compact?: boolean;
-  preserve?: Pick<SearchState, "elements" | "applications" | "property" | "journal" | "sort">;
+  preserve?: Pick<
+    SearchState,
+    "elements" | "applications" | "property" | "journal" | "sort" | "tab"
+  >;
 };
 
 export function SearchForm({
@@ -93,6 +96,7 @@ export function SearchForm({
       {preserve?.sort && preserve.sort !== "relevance" ? (
         <input type="hidden" name="sort" value={preserve.sort} />
       ) : null}
+      {preserve?.tab === "plots" ? <input type="hidden" name="tab" value="plots" /> : null}
       <button
         type="submit"
         aria-label="Search"

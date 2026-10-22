@@ -77,6 +77,7 @@ export function FacetPanel({ facets, query }: FacetPanelProps) {
           buildSearchHref({
             ...query,
             elements: toggleElement(query.elements, value),
+            page: 1,
           })
         }
       />
@@ -88,6 +89,7 @@ export function FacetPanel({ facets, query }: FacetPanelProps) {
           buildSearchHref({
             ...query,
             applications: toggleApplication(query.applications, value),
+            page: 1,
           })
         }
       />
@@ -99,6 +101,7 @@ export function FacetPanel({ facets, query }: FacetPanelProps) {
           buildSearchHref({
             ...query,
             property: query.property === value ? undefined : value,
+            page: 1,
           })
         }
       />
@@ -110,6 +113,7 @@ export function FacetPanel({ facets, query }: FacetPanelProps) {
           buildSearchHref({
             ...query,
             journal: query.journal === value ? undefined : value,
+            page: 1,
           })
         }
       />
@@ -121,6 +125,7 @@ export function FacetPanel({ facets, query }: FacetPanelProps) {
             applications: [],
             property: undefined,
             journal: undefined,
+            page: 1,
           })}
           className="inline-block text-xs text-accent underline-offset-4 hover:underline"
         >

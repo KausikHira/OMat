@@ -9,6 +9,8 @@ const empty: SearchState = {
   elements: [],
   applications: [],
   sort: "relevance",
+  tab: "all",
+  page: 1,
 };
 
 describe("parseSearchParams", () => {
@@ -29,6 +31,17 @@ describe("parseSearchParams", () => {
   test("only honors value sorting with a property", () => {
     expect(parseSearchParams({ sort: "value" }).sort).toBe("relevance");
     expect(parseSearchParams({ sort: "value", property: "band-gap" }).sort).toBe("value");
+  });
+
+  test("parses result tab and paper page, ignoring invalid values", () => {
+    expect(parseSearchParams({ tab: "plots", page: "2" })).toMatchObject({
+      tab: "plots",
+      page: 2,
+    });
+    expect(parseSearchParams({ tab: "other", page: "-4" })).toMatchObject({
+      tab: "all",
+      page: 1,
+    });
   });
 });
 
@@ -98,5 +111,11 @@ describe("buildSearchHref", () => {
 
   test("returns the bare search route for an empty state", () => {
     expect(buildSearchHref(empty)).toBe("/search");
+  });
+
+  test("preserves the active tab and paper page", () => {
+    expect(buildSearchHref({ ...empty, q: "coatings", tab: "plots", page: 2 })).toBe(
+      "/search?q=coatings&tab=plots&page=2",
+    );
   });
 });

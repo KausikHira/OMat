@@ -82,6 +82,11 @@ amounts, element vector, and `search_text`.
 | `year` | integer | Range filter and histogram |
 | `table_nos` | integer | Provenance |
 | `search_text` | text | Catch-all BM25 field |
+| `title`, `abstract` | text | Enrichment fields used by paper listings |
+
+`title` and `abstract` are optional enrichment fields. The CSV pipeline leaves
+them empty; a later enrichment pass may populate them. The web app falls back to
+measurement-derived labels when they are absent.
 
 ## Validation rules
 

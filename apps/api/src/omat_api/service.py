@@ -41,6 +41,7 @@ SOURCE_FIELDS = [
     "property.value_si", "elements", "species",
     "journal.name", "journal.slug", "year",
     "applications.raw", "applications.slug",
+    "title", "abstract",
 ]
 
 

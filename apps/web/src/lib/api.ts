@@ -68,6 +68,8 @@ export function toMeasurement(record: ApiRecord): Measurement {
       label: application.raw ?? prettifySlug(application.slug ?? ""),
       slug: application.slug ?? "",
     })),
+    title: record.title,
+    abstract: record.abstract,
   };
 }
 
@@ -99,7 +101,7 @@ function toApiParams(state: SearchState): SearchParams {
   };
 }
 
-export async function fetchMeasurements(state: SearchState, limit = 40): Promise<SearchResult> {
+export async function fetchMeasurements(state: SearchState, limit = 100): Promise<SearchResult> {
   try {
     const search = await searchRecords({ ...toApiParams(state), limit });
     const measurements = (search.data ?? []).map(toMeasurement);

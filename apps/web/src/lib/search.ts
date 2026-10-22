@@ -1,6 +1,7 @@
 import type { Measurement } from "./mock-records";
 
 export type SortKey = "relevance" | "newest" | "value";
+export type ResultTab = "all" | "plots";
 
 export type SearchState = {
   q: string;
@@ -9,6 +10,8 @@ export type SearchState = {
   property?: string;
   journal?: string;
   sort: SortKey;
+  tab: ResultTab;
+  page: number;
 };
 
 export type Facet = {
@@ -111,6 +114,7 @@ export function parseSearchParams(params: Record<string, SearchParamValue>): Sea
   const sort = first(params.sort);
   const normalizedSort: SortKey =
     sort === "newest" ? "newest" : sort === "value" && property ? "value" : "relevance";
+  const rawPage = Number.parseInt(first(params.page) ?? "", 10);
 
   return {
     q: (first(params.q) ?? "").trim(),
@@ -119,6 +123,8 @@ export function parseSearchParams(params: Record<string, SearchParamValue>): Sea
     property,
     journal: first(params.journal) || undefined,
     sort: normalizedSort,
+    tab: first(params.tab) === "plots" ? "plots" : "all",
+    page: Number.isFinite(rawPage) && rawPage > 0 ? rawPage : 1,
   };
 }
 
@@ -248,6 +254,12 @@ export function buildSearchHref(state: SearchState): string {
   }
   if (state.sort !== "relevance") {
     params.set("sort", state.sort);
+  }
+  if (state.tab === "plots") {
+    params.set("tab", "plots");
+  }
+  if (state.page > 1) {
+    params.set("page", String(state.page));
   }
 
   const queryString = params.toString();

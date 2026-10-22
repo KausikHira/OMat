@@ -2,11 +2,14 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { FacetPanel } from "@/components/facet-panel";
-import { ResultRow } from "@/components/result-row";
+import { ChartIcon, ListIcon } from "@/components/icons";
+import { PaperRow } from "@/components/paper-row";
+import { PlotsView } from "@/components/plots-view";
 import { SearchForm } from "@/components/search-form";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Wordmark } from "@/components/wordmark";
 import { fetchFacetPanels, fetchMeasurements } from "@/lib/api";
+import { groupMeasurementsByPaper, paginatePapers } from "@/lib/papers";
 import type { SearchState, SortKey } from "@/lib/search";
 import { buildSearchHref, parseSearchParams } from "@/lib/search";
 
@@ -18,14 +21,76 @@ type SearchPageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
 
+const resultTabs = [
+  { key: "all", label: "All", Icon: ListIcon },
+  { key: "plots", label: "Plots", Icon: ChartIcon },
+] as const;
+
+type PaginationProps = {
+  query: SearchState;
+  page: number;
+  totalPages: number;
+  start: number;
+  end: number;
+  total: number;
+};
+
+function Pagination({ query, page, totalPages, start, end, total }: PaginationProps) {
+  if (totalPages <= 1) {
+    return null;
+  }
+
+  return (
+    <nav
+      aria-label="Pagination"
+      className="mt-8 flex flex-wrap items-center justify-between gap-4 border-t border-line pt-5 text-[12px]"
+    >
+      <p className="text-muted">
+        Showing {start}–{end} of {total} papers
+      </p>
+      <div className="flex items-center gap-4">
+        {page > 1 ? (
+          <Link
+            href={buildSearchHref({ ...query, page: page - 1 })}
+            rel="prev"
+            className="text-accent underline underline-offset-4 hover:text-ink"
+          >
+            ← Previous
+          </Link>
+        ) : (
+          <span className="text-muted/50">← Previous</span>
+        )}
+        <span className="tabular-nums text-muted">
+          Page {page} of {totalPages}
+        </span>
+        {page < totalPages ? (
+          <Link
+            href={buildSearchHref({ ...query, page: page + 1 })}
+            rel="next"
+            className="text-accent underline underline-offset-4 hover:text-ink"
+          >
+            Next →
+          </Link>
+        ) : (
+          <span className="text-muted/50">Next →</span>
+        )}
+      </div>
+    </nav>
+  );
+}
+
 export default async function SearchPage({ searchParams }: SearchPageProps) {
   const query: SearchState = parseSearchParams(await searchParams);
 
-  // Live API first; mock records only when the API is unreachable.
-  const [{ measurements: results, total }, facetPanels] = await Promise.all([
+  // The search endpoint is measurement-level. Group its page of records into
+  // papers for display; paper-level pagination can move server-side when the
+  // API exposes grouped paper results.
+  const [{ measurements: results }, facetPanels] = await Promise.all([
     fetchMeasurements(query),
     fetchFacetPanels(query),
   ]);
+  const papers = groupMeasurementsByPaper(results);
+  const paperPage = paginatePapers(papers, query.page);
   const facets = facetPanels.facets;
   const hasFacets =
     facets.elements.length > 0 ||
@@ -37,6 +102,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
     query.applications.length > 0 ||
     Boolean(query.property) ||
     Boolean(query.journal);
+  const hasResults = results.length > 0;
 
   const sorts: { key: SortKey; label: string }[] = query.property
     ? [
@@ -64,6 +130,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
                 property: query.property,
                 journal: query.journal,
                 sort: query.sort,
+                tab: query.tab,
               }}
             />
           </div>
@@ -73,9 +140,29 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
         </div>
       </header>
 
-      <main className="mx-auto w-full max-w-5xl flex-1 px-5 py-8 sm:px-8">
+      <main className="mx-auto w-full max-w-5xl flex-1 px-5 py-7 sm:px-8">
+        <nav aria-label="Result views" className="flex gap-7 border-b border-line">
+          {resultTabs.map(({ key, label, Icon }) => {
+            const active = query.tab === key;
+
+            return (
+              <Link
+                key={key}
+                href={buildSearchHref({ ...query, tab: key, page: 1 })}
+                aria-current={active ? "page" : undefined}
+                className={`-mb-px inline-flex items-center gap-2 border-b-2 pb-3 text-[13px] transition-colors ${
+                  active ? "border-accent text-ink" : "border-transparent text-muted hover:text-ink"
+                }`}
+              >
+                <Icon className={`size-4 ${active ? "text-accent" : ""}`} />
+                {label}
+              </Link>
+            );
+          })}
+        </nav>
+
         <div
-          className={`grid gap-10 ${
+          className={`mt-7 grid gap-10 ${
             hasFacets ? "lg:grid-cols-[210px_minmax(0,1fr)] lg:gap-14" : ""
           }`}
         >
@@ -88,8 +175,8 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
           <section>
             <div className="flex flex-wrap items-baseline justify-between gap-3">
               <p className="text-[13px] text-muted">
-                <span className="font-medium text-ink">{total}</span>{" "}
-                {total === 1 ? "measurement" : "measurements"}
+                <span className="font-medium text-ink">{papers.length}</span>{" "}
+                {papers.length === 1 ? "paper" : "papers"}
                 {query.q ? (
                   <>
                     {" "}
@@ -98,7 +185,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
                 ) : null}
               </p>
 
-              {results.length > 0 ? (
+              {hasResults && query.tab === "all" ? (
                 <nav aria-label="Sort results" className="flex items-center gap-4 text-[12px]">
                   {sorts.map((option) => {
                     const active = query.sort === option.key;
@@ -106,7 +193,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
                     return (
                       <Link
                         key={option.key}
-                        href={buildSearchHref({ ...query, sort: option.key })}
+                        href={buildSearchHref({ ...query, sort: option.key, page: 1 })}
                         aria-current={active ? "true" : undefined}
                         className={
                           active
@@ -119,6 +206,10 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
                     );
                   })}
                 </nav>
+              ) : null}
+
+              {hasResults && query.tab === "plots" ? (
+                <p className="text-[11px] uppercase tracking-[0.08em] text-muted">Aggregate view</p>
               ) : null}
             </div>
 
@@ -133,15 +224,29 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
               </details>
             ) : null}
 
-            {results.length > 0 ? (
-              <ol className="mt-2 list-none">
-                {results.map((record) => (
-                  <ResultRow key={record.id} record={record} />
-                ))}
-              </ol>
+            {hasResults ? (
+              query.tab === "all" ? (
+                <>
+                  <ol className="mt-2 list-none">
+                    {paperPage.items.map((paper) => (
+                      <PaperRow key={paper.key} paper={paper} />
+                    ))}
+                  </ol>
+                  <Pagination
+                    query={query}
+                    page={paperPage.page}
+                    totalPages={paperPage.totalPages}
+                    start={paperPage.start}
+                    end={paperPage.end}
+                    total={papers.length}
+                  />
+                </>
+              ) : (
+                <PlotsView papers={papers} />
+              )
             ) : (
               <div className="py-16">
-                <h2 className="font-display text-2xl tracking-[-0.01em]">No measurements found</h2>
+                <h2 className="font-display text-2xl tracking-[-0.01em]">No papers found</h2>
                 <p className="mt-3 max-w-md text-[13px] leading-6 text-muted">
                   {hasFilters
                     ? "Try a composition label such as TiAlCrN, an element symbol, or remove a filter."
@@ -156,6 +261,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
                         applications: [],
                         property: undefined,
                         journal: undefined,
+                        page: 1,
                       })}
                       className="text-accent underline underline-offset-4"
                     >
@@ -176,7 +282,14 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
         <span>
           {facetPanels.source === "api" ? "Live API." : "API unreachable — showing mock records."}
         </span>
-        <span className="shrink-0">OMAT-SE</span>
+        <a
+          href="https://github.com/Jayesh-Dev21/Omat-se"
+          target="_blank"
+          rel="noreferrer noopener"
+          className="shrink-0 transition-colors hover:text-ink hover:underline underline-offset-4"
+        >
+          OMAT-SE
+        </a>
       </footer>
     </div>
   );

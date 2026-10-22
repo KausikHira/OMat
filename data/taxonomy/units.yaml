@@ -1,0 +1,28 @@
+# Unit normalization. The dataset has exactly 8 distinct units; "None"
+# (Python literal) means dimensionless. factor converts to SI.
+# si_unit is the SI dimension name used in range-filter labels.
+units:
+  GPa:
+    si_unit: Pa
+    factor: 1.0e9
+  K:
+    si_unit: K
+    factor: 1.0
+  "g/cm³":
+    si_unit: "kg/m³"
+    factor: 1000.0
+  "Ω⁻¹·cm⁻¹":
+    si_unit: "S/m"
+    factor: 100.0
+  eV:
+    si_unit: J
+    factor: 1.602176634e-19
+  "K⁻¹":
+    si_unit: "K⁻¹"
+    factor: 1.0
+  "MPa⋅m½":
+    si_unit: "Pa·√m"
+    factor: 1.0e6
+  dimensionless:
+    si_unit: "1"
+    factor: 1.0

@@ -1,0 +1,57 @@
+# Property name normalization. raw (as in CSV) -> slug + display name.
+# 18 distinct names in final_data.csv; add aliases here as new sources arrive.
+properties:
+  youngs_modulus:
+    display: "Young's modulus"
+    aliases: ["Youngs modulus", "Young's modulus", "young's modulus", "E"]
+  hardness:
+    display: "Hardness"
+    aliases: ["Hardness"]
+  density:
+    display: "Density"
+    aliases: ["density"]
+  electric_conductivity:
+    display: "Electric conductivity"
+    aliases: ["Electric conductivity", "Electrical conductivity"]
+  activation_energy:
+    display: "Activation energy"
+    aliases: ["Activation energy"]
+  refractive_index:
+    display: "Refractive index"
+    aliases: ["Refractive index"]
+  crystallization_temperature:
+    display: "Crystallization temperature"
+    aliases: ["Crystallization temperature"]
+  thermal_expansion_coefficient:
+    display: "Thermal expansion coefficient"
+    aliases: ["Thermal expansion coefficient", "CTE"]
+  glass_transition_temperature:
+    display: "Glass transition temperature"
+    aliases: ["Glass transition temperature", "Tg"]
+  poisson_ratio:
+    display: "Poisson ratio"
+    aliases: ["Poisson ratio", "Poisson's ratio"]
+  melting_temperature:
+    display: "Melting temperature"
+    aliases: ["Melting temperature"]
+  fracture_toughness:
+    display: "Fracture toughness"
+    aliases: ["Fracture toughness"]
+  bulk_modulus:
+    display: "Bulk modulus"
+    aliases: ["Bulk modulus"]
+  softening_point:
+    display: "Softening point"
+    aliases: ["Softening point"]
+  shear_modulus:
+    display: "Shear modulus"
+    aliases: ["Shear modulus"]
+  annealing_point:
+    display: "Annealing point"
+    aliases: ["Annealing point"]
+  liquidus_temperature:
+    display: "Liquidus temperature"
+    aliases: ["Liquidus temperature"]
+  abbe_number:
+    display: "Abbe number"
+    aliases: ["Abbe number"]

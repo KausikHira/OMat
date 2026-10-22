@@ -1,0 +1,9 @@
+# Synonyms for the omat_text analyzer. Format: word1, word2 => word3 (or plain equivalences).
+# Materials-domain equivalences observed in the dataset vocabulary.
+youngs modulus, young's modulus
+electrical conductivity, electric conductivity
+glass transition temperature, tg
+thermal expansion coefficient, cte
+high entropy alloy, hea
+refractory, high melting
+coating, coatings, barrier

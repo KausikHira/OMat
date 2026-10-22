@@ -1,0 +1,25 @@
+# Journal names keyed by the DOI path slug (10.xxxx/j.<slug>.YYYY...).
+# Counts are unique papers per journal in final_data.csv.
+journals:
+  ceramint:
+    name: "Ceramics International"
+  jnucmat:
+    name: "Journal of Nuclear Materials"
+  tsf:
+    name: "Thin Solid Films"
+  ssi:
+    name: "Solid State Ionics"
+  optmat:
+    name: "Optical Materials"
+  jnoncrysol:
+    name: "Journal of Non-Crystalline Solids"
+  matlet:
+    name: "Materials Letters"
+  jssc:
+    name: "Journal of Solid State Chemistry"
+  jpcs:
+    name: "Journal of Physics and Chemistry of Solids"
+  solidstatesciences:
+    name: "Solid State Sciences"
+  ssc:
+    name: "Solid State Communications"

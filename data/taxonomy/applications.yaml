@@ -1,0 +1,16 @@
+# APL_Group taxonomy — 11 distinct groups extracted from final_data.csv.
+# The raw strings are the source of truth; slugs are derived on load.
+# Empty APL_Group never occurs in this dataset, but "unclassified" is the
+# fallback facet value if a future source has blanks.
+applications:
+  - raw: "Energy"
+  - raw: "Coatings / Barriers"
+  - raw: "Optical / Photonics"
+  - raw: "Miscellaneous"
+  - raw: "Nuclear / Radiation"
+  - raw: "Fuel Cells"
+  - raw: "Structural / Mechanical"
+  - raw: "Catalysis"
+  - raw: "Microelectronic components"
+  - raw: "Biomedical / Dental"
+  - raw: "Sensors / Actuators"

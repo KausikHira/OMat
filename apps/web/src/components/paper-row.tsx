@@ -1,6 +1,8 @@
 import type { PaperGroup } from "@/lib/papers";
 import { formatValue } from "@/lib/search";
 
+import { PaperChat } from "./paper-chat";
+
 type PaperRowProps = {
   paper: PaperGroup;
 };
@@ -42,16 +44,19 @@ export function PaperRow({ paper }: PaperRowProps) {
             </h2>
           </div>
 
-          {paper.doiHref ? (
-            <a
-              href={paper.doiHref}
-              target="_blank"
-              rel="noreferrer noopener"
-              className="shrink-0 text-[11px] text-accent underline decoration-accent/40 underline-offset-4 transition-colors hover:decoration-accent"
-            >
-              Read paper ↗
-            </a>
-          ) : null}
+          <div className="flex shrink-0 items-center gap-3">
+            {paper.doiHref ? (
+              <a
+                href={paper.doiHref}
+                target="_blank"
+                rel="noreferrer noopener"
+                className="text-[11px] text-accent underline decoration-accent/40 underline-offset-4 transition-colors hover:decoration-accent"
+              >
+                Read paper ↗
+              </a>
+            ) : null}
+            <PaperChat paper={paper} />
+          </div>
         </div>
 
         <p

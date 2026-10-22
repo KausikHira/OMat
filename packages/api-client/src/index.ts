@@ -190,3 +190,78 @@ export function fetchPaper(
     signal,
   );
 }
+
+// ---- Per-paper chat (SSE) ------------------------------------------------------
+
+export type ChatEvent =
+  | { type: "meta"; paper: string; records: number }
+  | { type: "delta"; text: string }
+  | { type: "error"; message: string }
+  | { type: "done" };
+
+/**
+ * Stream a chat reply for one paper. The API answers over SSE with
+ * `data: {"delta": "..."}` chunks terminated by `[DONE]`; any error event is
+ * surfaced as a thrown Error so the UI can fall back to the offline replies.
+ */
+export async function streamPaperChat(
+  idOrDoi: string,
+  message: string,
+  onDelta: (text: string) => void,
+  signal?: AbortSignal,
+): Promise<void> {
+  const response = await fetch(
+    `${apiBaseUrl()}/v1/papers/${encodeURIComponent(idOrDoi)}/chat`,
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ message }),
+      signal,
+    },
+  );
+  if (!response.ok || !response.body) {
+    throw new Error(`chat failed: http ${response.status}`);
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  const emit = (raw: string): void => {
+    if (raw === "[DONE]") {
+      return;
+    }
+    let payload: Record<string, unknown>;
+    try {
+      payload = JSON.parse(raw) as Record<string, unknown>;
+    } catch {
+      // Non-JSON SSE line; ignore so a stray keepalive cannot break the stream.
+      return;
+    }
+    if (typeof payload.error === "string") {
+      throw new Error(payload.error);
+    }
+    if (typeof payload.delta === "string") {
+      onDelta(payload.delta);
+    }
+  };
+
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) {
+      break;
+    }
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split("\n");
+    buffer = lines.pop() ?? "";
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (trimmed.startsWith("data:")) {
+        emit(trimmed.slice(5).trim());
+      }
+    }
+  }
+  if (buffer.startsWith("data:")) {
+    emit(buffer.slice(5).trim());
+  }
+}

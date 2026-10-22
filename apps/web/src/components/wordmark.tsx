@@ -15,7 +15,7 @@ export function Wordmark({ size = "sm", className = "" }: WordmarkProps) {
       aria-label="omat home"
       className={`inline-flex items-baseline gap-[0.07em] font-display font-normal leading-none tracking-[-0.045em] text-ink ${wordmark} ${className}`}
     >
-      <span>omat</span>
+      <span>Ωmat</span>
       <span aria-hidden="true" className={`inline-block rounded-full bg-accent ${dot}`} />
     </Link>
   );

@@ -38,7 +38,8 @@
   --color-accent: var(--accent);
   --color-accent-ink: var(--accent-ink);
   --font-sans: var(--font-instrument);
-  --font-display: var(--font-newsreader);
+  --font-display: var(--font-newsreader), "Iowan Old Style", "Palatino Linotype", "Book Antiqua",
+    "Times New Roman", serif;
 }
 
 @layer base {

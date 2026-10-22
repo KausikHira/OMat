@@ -23,8 +23,9 @@ describe("doi helpers", () => {
 describe("groupMeasurementsByPaper", () => {
   test("builds one paper per DOI with its metadata", () => {
     const papers = groupMeasurementsByPaper(MEASUREMENTS);
+    const uniqueDois = new Set(MEASUREMENTS.map((record) => record.doi));
 
-    expect(papers).toHaveLength(MEASUREMENTS.length);
+    expect(papers).toHaveLength(uniqueDois.size);
     expect(papers[0]?.title.length).toBeGreaterThan(0);
     expect(papers[0]?.abstract.length).toBeGreaterThan(0);
     expect(papers[0]?.doiHref).toBe("https://doi.org/10.1016/j.matlet.2020.129009");
@@ -64,9 +65,9 @@ describe("paginatePapers", () => {
   test("returns the remainder on the last page", () => {
     const page = paginatePapers(papers, 2);
 
-    expect(page.items).toHaveLength(5);
+    expect(page.items).toHaveLength(papers.length - 10);
     expect(page.start).toBe(11);
-    expect(page.end).toBe(15);
+    expect(page.end).toBe(papers.length);
   });
 
   test("clamps pages outside the available range", () => {

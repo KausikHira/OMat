@@ -18,6 +18,7 @@ from omat_core.opensearch import (
     parse_cursor,
     search_after_cursor,
 )
+from omat_core.gsc import GscRow
 
 
 class SearchBackendUnavailable(RuntimeError):
@@ -153,6 +154,77 @@ async def facet_counts(
             ]
     facets["property_stats"] = response["aggregations"].get("property_stats", {})
     return facets
+
+
+async def fetch_gsc_rows(
+    client: AsyncOpenSearch,
+    *,
+    filters: dict[str, list[str]],
+    property_a: str,
+    property_b: str,
+    max_docs: int = 4000,
+) -> list[GscRow]:
+    """Bounded search_after scan of the docs measuring either property.
+
+    GSC pairs measurements of the same material across property documents,
+    which no single OpenSearch aggregation can do; the API scans a capped
+    window (sorted by record_id, never from/size) and hands the rows to
+    ``omat_core.gsc.build_gsc`` for the actual chart math.
+    """
+    query = build_search_query(None, filters)
+    query["bool"]["filter"].extend(
+        [
+            {"terms": {"property.slug": [property_a, property_b]}},
+            {"term": {"has_property": True}},
+            {"term": {"has_composition": True}},
+        ]
+    )
+    rows: list[GscRow] = []
+    search_after: list[Any] | None = None
+    page = 500
+    while len(rows) < max_docs:
+        body: dict[str, Any] = {
+            "query": query,
+            "size": min(page, max_docs - len(rows)),
+            "sort": [{"record_id": "asc"}],
+            "_source": [
+                "article_pii",
+                "composition.canonical",
+                "composition.label",
+                "elements",
+                "property.name",
+                "property.slug",
+                "property.value",
+                "property.unit",
+            ],
+        }
+        if search_after:
+            body["search_after"] = search_after
+        try:
+            response = await client.search(index=ALIAS, body=body)
+        except Exception as exc:
+            raise SearchBackendUnavailable(f"opensearch unreachable: {exc}") from exc
+        hits = response["hits"]["hits"]
+        for hit in hits:
+            source = hit["_source"]
+            composition = source.get("composition") or {}
+            rows.append(
+                GscRow(
+                    article_pii=source.get("article_pii") or "",
+                    canonical=composition.get("canonical")
+                    or composition.get("label")
+                    or "",
+                    elements=tuple(source.get("elements") or []),
+                    slug=(source.get("property") or {}).get("slug") or "",
+                    name=(source.get("property") or {}).get("name") or "",
+                    value=float((source.get("property") or {}).get("value") or 0.0),
+                    unit=(source.get("property") or {}).get("unit") or "",
+                )
+            )
+        if len(hits) < page:
+            break
+        search_after = hits[-1]["sort"]
+    return rows
 
 
 async def get_paper(

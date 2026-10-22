@@ -86,4 +86,14 @@ export const PAPER_METADATA: Record<string, PaperMetadata> = {
     abstract:
       "CrN films deposited by reactive magnetron sputtering were evaluated for hardness and wear. The coatings exhibit a hardness of 18 GPa and are discussed as wear-protection layers.",
   },
+  "10.1016/j.matlet.2014.06.083": {
+    title: "Composition dependence of density and hardness in AgI–GeS2–Sb2S3 glasses",
+    abstract:
+      "AgI–GeS2–Sb2S3 chalcogenide glasses were prepared across a wide AgI range and characterized for density and hardness. Both properties increase with AgI content, and the results are discussed for energy-related glass applications.",
+  },
+  "10.1016/S0167-577X(01)00625-5": {
+    title: "Density and glass transition behaviour of BaO–La2O3/LaF3–TeO2 tellurite glasses",
+    abstract:
+      "Tellurite glasses in the BaO–La2O3–LaF3–TeO2 system were synthesized and measured for density and glass transition temperature. Substituting LaF3 for La2O3 lowers both properties, consistent with fluorine modifying the tellurite network.",
+  },
 };

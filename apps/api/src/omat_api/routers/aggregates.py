@@ -6,6 +6,8 @@ kinds:
 - top_journals   : horizontal bar data
 - element_pairs  : co-occurrence counts (for the heatmap)
 - property_by_year: avg property value per year (scatter/trend)
+- gsc            : property-vs-property points grouped by composition family
+                   with smoothed convex hulls (the notebook chart)
 """
 
 from __future__ import annotations
@@ -15,15 +17,17 @@ from typing import Any, Literal
 from fastapi import APIRouter, Depends, HTTPException, Query
 from opensearchpy import AsyncOpenSearch
 
+from omat_core.gsc import build_gsc
 from omat_core.opensearch import ALIAS, build_search_query
 
 from ..deps import get_opensearch
-from ..service import SearchBackendUnavailable, parse_multi
+from ..service import SearchBackendUnavailable, fetch_gsc_rows, parse_multi
 
 router = APIRouter(prefix="/aggregates", tags=["aggregates"])
 
 Kind = Literal[
-    "property_hist", "records_by_year", "top_journals", "element_pairs", "property_by_year",
+    "property_hist", "records_by_year", "top_journals", "element_pairs",
+    "property_by_year", "gsc",
 ]
 
 
@@ -48,12 +52,36 @@ def _base_filters(elements: str | None, journal: str | None, app: str | None,
 async def aggregates(
     kind: Kind,
     property: str | None = None,  # noqa: A002
+    property_a: str | None = None,
+    property_b: str | None = None,
     elements: str | None = None,
     journal: str | None = None,
     app: str | None = None,
     size: int = Query(default=30, ge=1, le=100),
     client: AsyncOpenSearch = Depends(get_opensearch),
 ) -> dict[str, Any]:
+    if kind == "gsc":
+        if not property_a or not property_b:
+            raise HTTPException(
+                422, "gsc requires ?property_a=<slug>&property_b=<slug>"
+            )
+        if property_a == property_b:
+            raise HTTPException(422, "gsc requires two different properties")
+        filters: dict[str, list[str]] = {}
+        if elements:
+            filters["elements"] = parse_multi(elements)
+        if journal:
+            filters["journal"] = parse_multi(journal)
+        if app:
+            filters["application"] = parse_multi(app)
+        rows = await fetch_gsc_rows(
+            client,
+            filters=filters,
+            property_a=property_a,
+            property_b=property_b,
+        )
+        return {"kind": kind, **build_gsc(rows, property_a, property_b)}
+
     query = _base_filters(elements, journal, app, property)
 
     if kind == "property_hist":

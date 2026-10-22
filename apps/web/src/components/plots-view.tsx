@@ -1,5 +1,8 @@
 import type { ReactNode } from "react";
 
+import { GscChartPlot } from "@/components/gsc-chart";
+import type { PairOption } from "@/lib/gsc";
+import type { GscChart } from "@/lib/gsc";
 import type { PaperGroup } from "@/lib/papers";
 import {
   type SeriesPoint,
@@ -8,6 +11,7 @@ import {
   getPapersByJournal,
   getPapersByYear,
 } from "@/lib/plots";
+import type { SearchState } from "@/lib/search";
 
 type ChartFrameProps = {
   title: string;
@@ -111,7 +115,111 @@ function HorizontalBars({ title, caption, points, emptyLabel }: HorizontalBarsPr
   );
 }
 
-export function PlotsView({ papers }: { papers: PaperGroup[] }) {
+type PairSelectProps = {
+  query: SearchState;
+  pair: { a: string; b: string };
+  options: PairOption[];
+};
+
+/** Plain GET form so any property pair is a shareable /search URL. */
+function PairSelect({ query, pair, options }: PairSelectProps) {
+  if (options.length < 2) {
+    return null; // no pairable properties in this result set
+  }
+
+  return (
+    <form
+      action="/search"
+      method="get"
+      aria-label="Choose the GSC property pair"
+      className="flex flex-wrap items-end gap-4 text-[12px]"
+    >
+      <input type="hidden" name="tab" value="plots" />
+      {query.q ? <input type="hidden" name="q" value={query.q} /> : null}
+      {query.elements.map((element) => (
+        <input key={element} type="hidden" name="element" value={element} />
+      ))}
+      {query.applications.map((application) => (
+        <input key={application} type="hidden" name="application" value={application} />
+      ))}
+      {query.journal ? <input type="hidden" name="journal" value={query.journal} /> : null}
+
+      <label className="flex flex-col gap-1.5">
+        <span className="text-muted">X property</span>
+        <select
+          name="gscA"
+          defaultValue={pair.a}
+          className="border border-line-strong bg-panel px-2.5 py-1.5 text-ink outline-none"
+        >
+          {options.map((option) => (
+            <option key={option.slug} value={option.slug}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className="flex flex-col gap-1.5">
+        <span className="text-muted">Y property</span>
+        <select
+          name="gscB"
+          defaultValue={pair.b}
+          className="border border-line-strong bg-panel px-2.5 py-1.5 text-ink outline-none"
+        >
+          {options.map((option) => (
+            <option key={option.slug} value={option.slug}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </label>
+      <button
+        type="submit"
+        className="rounded-[7px] bg-accent px-4 py-2 text-[12px] font-medium text-accent-ink transition-opacity hover:opacity-85"
+      >
+        Update chart
+      </button>
+    </form>
+  );
+}
+
+type GscSectionProps = {
+  query: SearchState;
+  pair: { a: string; b: string };
+  options: PairOption[];
+  chart: GscChart;
+};
+
+function GscSection({ query, pair, options, chart }: GscSectionProps) {
+  return (
+    <ChartFrame
+      title="Property correlation by composition family"
+      caption={`${chart.propertyA.name} vs ${chart.propertyB.name}: each blob is the
+        smoothed convex hull of one element family, as in the GSC analysis.`}
+    >
+      <div className="mt-4">
+        <PairSelect query={query} pair={pair} options={options} />
+      </div>
+      <div className="mt-4">
+        {chart.families.length > 0 ? (
+          <GscChartPlot chart={chart} />
+        ) : (
+          <p className="py-10 text-center text-[12px] text-muted">
+            No material in this result set measured both {chart.propertyA.name.toLowerCase()} and{" "}
+            {chart.propertyB.name.toLowerCase()}. Pick another pair.
+          </p>
+        )}
+      </div>
+    </ChartFrame>
+  );
+}
+
+export function PlotsView({
+  papers,
+  gsc,
+}: {
+  papers: PaperGroup[];
+  gsc: GscSectionProps;
+}) {
   const recordCount = papers.reduce((sum, paper) => sum + paper.records.length, 0);
 
   return (
@@ -119,6 +227,8 @@ export function PlotsView({ papers }: { papers: PaperGroup[] }) {
       <p className="text-[12px] text-muted">
         Aggregates include all {papers.length} papers in this result set, not just the current page.
       </p>
+
+      <GscSection {...gsc} />
 
       <YearChart points={getPapersByYear(papers)} />
 

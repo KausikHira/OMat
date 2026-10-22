@@ -4,14 +4,16 @@
 // only as a dev fallback when the API is unreachable, so the UI works with or
 // without OpenSearch running.
 
-import type { ApiFacetBucket, ApiRecord } from "@omat/api-client";
+import type { ApiFacetBucket, ApiRecord, GscResponse } from "@omat/api-client";
 import {
   type FacetsResponse,
   type SearchParams,
   fetchFacets,
+  fetchGsc,
   searchRecords,
 } from "@omat/api-client";
 
+import { type GscAxis, type GscChart, type GscFamily, buildGscChart } from "@/lib/gsc";
 import { MEASUREMENTS, type Measurement } from "@/lib/mock-records";
 import { type Facets, type SearchState, getFacets, searchMeasurements } from "@/lib/search";
 
@@ -141,5 +143,51 @@ export async function fetchFacetPanels(
   } catch {
     const facets = getFacets(searchMeasurements(MEASUREMENTS, state));
     return { facets, source: "mock" };
+  }
+}
+
+// ---- GSC chart: API aggregate -> web chart shape --------------------------------
+
+function toAxis(axis: GscResponse["property_a"], fallbackSlug: string): GscAxis {
+  return {
+    slug: axis?.slug ?? fallbackSlug,
+    name: axis?.name ?? fallbackSlug,
+    unit: axis?.unit ?? "",
+  };
+}
+
+export async function fetchGscChart(
+  state: SearchState,
+  pair: { a: string; b: string },
+): Promise<{ chart: GscChart; source: "api" | "mock" }> {
+  const params = {
+    property_a: pair.a,
+    property_b: pair.b,
+    elements: state.elements,
+    journal: state.journal ? [state.journal] : undefined,
+    app: state.applications,
+  };
+
+  try {
+    const response = await fetchGsc(params);
+    const families: GscFamily[] = (response.families ?? []).map((family) => ({
+      family: family.family ?? "[]",
+      count: family.count ?? 0,
+      points: family.points ?? [],
+      hull: family.hull ?? [],
+    }));
+    return {
+      chart: {
+        propertyA: toAxis(response.property_a, pair.a),
+        propertyB: toAxis(response.property_b, pair.b),
+        families,
+        totalPoints: response.total_points ?? 0,
+      },
+      source: "api",
+    };
+  } catch {
+    // Dev fallback: same chart math over the mock records.
+    const chart = buildGscChart(searchMeasurements(MEASUREMENTS, state), pair.a, pair.b);
+    return { chart, source: "mock" };
   }
 }

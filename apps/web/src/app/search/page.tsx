@@ -8,7 +8,8 @@ import { PlotsView } from "@/components/plots-view";
 import { SearchForm } from "@/components/search-form";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Wordmark } from "@/components/wordmark";
-import { fetchFacetPanels, fetchMeasurements } from "@/lib/api";
+import { fetchFacetPanels, fetchGscChart, fetchMeasurements } from "@/lib/api";
+import { pairableProperties } from "@/lib/gsc";
 import { groupMeasurementsByPaper, paginatePapers } from "@/lib/papers";
 import type { SearchState, SortKey } from "@/lib/search";
 import { buildSearchHref, parseSearchParams } from "@/lib/search";
@@ -20,6 +21,27 @@ export const metadata: Metadata = {
 type SearchPageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
+
+const GSC_SLUG_PATTERN = /^[a-z0-9_-]+$/;
+
+function gscSlug(
+  params: Record<string, string | string[] | undefined>,
+  key: string,
+): string | undefined {
+  const value = Array.isArray(params[key]) ? params[key]?.[0] : params[key];
+  return value && GSC_SLUG_PATTERN.test(value) ? value : undefined;
+}
+
+/** GSC pair from the URL; defaults to the notebook's final choice. */
+function parseGscPair(params: Record<string, string | string[] | undefined>): {
+  a: string;
+  b: string;
+} {
+  return {
+    a: gscSlug(params, "gscA") ?? "hardness",
+    b: gscSlug(params, "gscB") ?? "density",
+  };
+}
 
 const resultTabs = [
   { key: "all", label: "All", Icon: ListIcon },
@@ -80,7 +102,9 @@ function Pagination({ query, page, totalPages, start, end, total }: PaginationPr
 }
 
 export default async function SearchPage({ searchParams }: SearchPageProps) {
-  const query: SearchState = parseSearchParams(await searchParams);
+  const rawParams = await searchParams;
+  const query: SearchState = parseSearchParams(rawParams);
+  const gscPair = parseGscPair(rawParams);
 
   // The search endpoint is measurement-level. Group its page of records into
   // papers for display; paper-level pagination can move server-side when the
@@ -89,6 +113,10 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
     fetchMeasurements(query),
     fetchFacetPanels(query),
   ]);
+  // The GSC chart is only fetched on the Plots tab, from the aggregate
+  // endpoint (never from the raw result set in the browser).
+  const gsc = query.tab === "plots" ? await fetchGscChart(query, gscPair) : null;
+  const gscOptions = pairableProperties(results);
   const papers = groupMeasurementsByPaper(results);
   const paperPage = paginatePapers(papers, query.page);
   const facets = facetPanels.facets;
@@ -224,8 +252,18 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
               </details>
             ) : null}
 
-            {hasResults ? (
-              query.tab === "all" ? (
+            {query.tab === "plots" && gsc ? (
+              <PlotsView
+                papers={papers}
+                gsc={{
+                  query,
+                  pair: gscPair,
+                  options: gscOptions,
+                  chart: gsc.chart,
+                }}
+              />
+            ) : query.tab === "all" ? (
+              hasResults ? (
                 <>
                   <ol className="mt-2 list-none">
                     {paperPage.items.map((paper) => (
@@ -242,38 +280,39 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
                   />
                 </>
               ) : (
-                <PlotsView papers={papers} />
-              )
-            ) : (
-              <div className="py-16">
-                <h2 className="font-display text-2xl tracking-[-0.01em]">No papers found</h2>
-                <p className="mt-3 max-w-md text-[13px] leading-6 text-muted">
-                  {hasFilters
-                    ? "Try a composition label such as TiAlCrN, an element symbol, or remove a filter."
-                    : "Try a composition label such as TiAlCrN, an element symbol, or a property such as band gap."}
-                </p>
-                <div className="mt-6 flex flex-wrap items-center gap-5 text-[13px]">
-                  {hasFilters ? (
+                <div className="py-16">
+                  <h2 className="font-display text-2xl tracking-[-0.01em]">No papers found</h2>
+                  <p className="mt-3 max-w-md text-[13px] leading-6 text-muted">
+                    {hasFilters
+                      ? "Try a composition label such as TiAlCrN, an element symbol, or remove a filter."
+                      : "Try a composition label such as TiAlCrN, an element symbol, or a property such as band gap."}
+                  </p>
+                  <div className="mt-6 flex flex-wrap items-center gap-5 text-[13px]">
+                    {hasFilters ? (
+                      <Link
+                        href={buildSearchHref({
+                          ...query,
+                          elements: [],
+                          applications: [],
+                          property: undefined,
+                          journal: undefined,
+                          page: 1,
+                        })}
+                        className="text-accent underline underline-offset-4"
+                      >
+                        Clear filters
+                      </Link>
+                    ) : null}
                     <Link
-                      href={buildSearchHref({
-                        ...query,
-                        elements: [],
-                        applications: [],
-                        property: undefined,
-                        journal: undefined,
-                        page: 1,
-                      })}
-                      className="text-accent underline underline-offset-4"
+                      href="/"
+                      className="text-muted underline underline-offset-4 hover:text-ink"
                     >
-                      Clear filters
+                      Start a new search
                     </Link>
-                  ) : null}
-                  <Link href="/" className="text-muted underline underline-offset-4 hover:text-ink">
-                    Start a new search
-                  </Link>
+                  </div>
                 </div>
-              </div>
-            )}
+              )
+            ) : null}
           </section>
         </div>
       </main>

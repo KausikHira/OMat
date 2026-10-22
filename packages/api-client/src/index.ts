@@ -68,6 +68,48 @@ export type FacetsResponse = {
   property_stats?: Record<string, unknown>;
 };
 
+// ---- GSC (glass-structure-composition) chart ----------------------------------
+
+export type GscPoint = { x: number; y: number };
+
+export type GscAxis = { slug?: string; name?: string; unit?: string };
+
+export type GscFamily = {
+  family?: string;
+  count?: number;
+  points?: GscPoint[];
+  /** Smoothed, closed convex hull polygon in the same units as the axes. */
+  hull?: GscPoint[];
+};
+
+export type GscResponse = {
+  kind?: "gsc";
+  property_a?: GscAxis;
+  property_b?: GscAxis;
+  families?: GscFamily[];
+  total_points?: number;
+};
+
+export type GscParams = {
+  property_a: string;
+  property_b: string;
+  elements?: string[];
+  journal?: string[];
+  app?: string[];
+};
+
+export function fetchGsc(params: GscParams, signal?: AbortSignal): Promise<GscResponse> {
+  const search = new URLSearchParams({
+    kind: "gsc",
+    property_a: params.property_a,
+    property_b: params.property_b,
+  });
+  for (const element of params.elements ?? []) search.append("elements", element);
+  for (const journal of params.journal ?? []) search.append("journal", journal);
+  for (const app of params.app ?? []) search.append("app", app);
+  return getJson<GscResponse>(`/v1/aggregates?${search.toString()}`, signal);
+}
+
 // ---- Query params -----------------------------------------------------------
 
 export type SearchParams = {

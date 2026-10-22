@@ -37,7 +37,9 @@ export function ResultRow({ record }: ResultRowProps) {
       </div>
 
       <p className="mt-2 text-[13px] text-muted">
-        {record.journal}, {record.year}, Table {record.table}
+        {record.journal}
+        {record.year ? `, ${record.year}` : null}
+        {record.table !== undefined ? `, Table ${record.table}` : null}
       </p>
 
       <div className="mt-3 flex flex-wrap items-center gap-1.5">

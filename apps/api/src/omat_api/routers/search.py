@@ -18,6 +18,7 @@ from fastapi import APIRouter, Depends, Query
 from opensearchpy import AsyncOpenSearch
 from redis.asyncio import Redis
 
+from ..cache import cache_get, cache_set
 from ..deps import get_opensearch, get_redis
 from ..service import parse_multi, search_records
 
@@ -54,11 +55,11 @@ async def search(
     ).hexdigest()
 
     if cacheable:
-        cached = await redis.get(cache_key)
+        cached = await cache_get(redis, cache_key)
         if cached:
             return json.loads(cached)
 
-    result = search_records(
+    result = await search_records(
         client,
         q=q,
         elements=parse_multi(elements),
@@ -75,5 +76,5 @@ async def search(
     )
 
     if cacheable:
-        await redis.set(cache_key, json.dumps(result), ex=CACHE_TTL)
+        await cache_set(redis, cache_key, json.dumps(result), CACHE_TTL)
     return result

@@ -36,7 +36,15 @@ def papers_mapping() -> dict[str, Any]:
                 "filter": {
                     "omat_synonym": {
                         "type": "synonym",
-                        "synonyms_path": "synonyms/materials.txt",
+                        # Inlined (not synonyms_path) so no container mount is needed.
+                        "synonyms": [
+                            "youngs modulus, young's modulus",
+                            "electrical conductivity, electric conductivity",
+                            "glass transition temperature, tg",
+                            "thermal expansion coefficient, cte",
+                            "high entropy alloy, hea",
+                            "coating, coatings, barrier",
+                        ],
                     }
                 },
             },

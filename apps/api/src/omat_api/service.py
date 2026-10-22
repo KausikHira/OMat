@@ -19,6 +19,10 @@ from omat_core.opensearch import (
     search_after_cursor,
 )
 
+
+class SearchBackendUnavailable(RuntimeError):
+    """OpenSearch unreachable/timeout. Routers map this to 503."""
+
 SORT_OPTIONS = {
     "relevance": [("_score", "desc"), ("record_id", "asc")],
     "year_desc": [("year", "desc"), ("record_id", "asc")],
@@ -47,7 +51,7 @@ def parse_multi(raw: str | None) -> list[str]:
     return [v.strip() for v in raw.split(",") if v.strip()]
 
 
-def search_records(
+async def search_records(
     client: AsyncOpenSearch,
     *,
     q: str | None = None,
@@ -102,7 +106,10 @@ def search_records(
         body["sort"] = SORT_OPTIONS[sort_name]
 
     start = time.perf_counter()
-    response = client.search(index=ALIAS, body=body)
+    try:
+        response = await client.search(index=ALIAS, body=body)
+    except Exception as exc:
+        raise SearchBackendUnavailable(f"opensearch unreachable: {exc}") from exc
     took_ms = int((time.perf_counter() - start) * 1000)
 
     hits = response["hits"]
@@ -118,7 +125,7 @@ def search_records(
     return {"data": records, "total": total, "took_ms": took_ms, "cursor": next_cursor}
 
 
-def facet_counts(
+async def facet_counts(
     client: AsyncOpenSearch,
     *,
     q: str | None = None,
@@ -133,7 +140,10 @@ def facet_counts(
         "size": 0,
         "aggs": aggs,
     }
-    response = client.search(index=ALIAS, body=body)
+    try:
+        response = await client.search(index=ALIAS, body=body)
+    except Exception as exc:
+        raise SearchBackendUnavailable(f"opensearch unreachable: {exc}") from exc
     facets: dict[str, Any] = {}
     for name, bucket in response["aggregations"].items():
         if "buckets" in bucket:
@@ -144,7 +154,7 @@ def facet_counts(
     return facets
 
 
-def get_paper(
+async def get_paper(
     client: AsyncOpenSearch, *, doi: str | None = None, pii: str | None = None,
     size: int = 1000,
 ) -> dict[str, Any] | None:
@@ -160,7 +170,10 @@ def get_paper(
         "sort": [{"row_index": "asc"}],
         "_source": SOURCE_FIELDS,
     }
-    response = client.search(index=ALIAS, body=body)
+    try:
+        response = await client.search(index=ALIAS, body=body)
+    except Exception as exc:
+        raise SearchBackendUnavailable(f"opensearch unreachable: {exc}") from exc
     hits = response["hits"]["hits"]
     if not hits:
         return None

@@ -20,6 +20,7 @@ from redis.asyncio import Redis
 
 from omat_core.valency import Valency, ValencyClient, ValencyUnavailable
 
+from ..cache import cache_get, cache_set
 from ..deps import get_redis
 from ..settings import get_settings
 
@@ -54,7 +55,7 @@ async def literature_search(
         return {"available": False, "results": [], "detail": "valency disabled"}
 
     cache_key = f"valency:search:{hashlib.sha1(f'{q}|{limit}'.encode()).hexdigest()}"
-    cached = await redis.get(cache_key)
+    cached = await cache_get(redis, cache_key)
     if cached:
         return {**json.loads(cached), "cached": True}
 
@@ -64,10 +65,7 @@ async def literature_search(
         return _unavailable_detail(exc)
 
     payload = {"available": True, "query": q, "results": papers}
-    await redis.set(
-        cache_key, json.dumps(payload),
-        ex=get_settings().valency_search_ttl,
-    )
+    await cache_set(redis, cache_key, json.dumps(payload), get_settings().valency_search_ttl)
     return payload
 
 
@@ -82,7 +80,7 @@ async def literature_trends(
         return {"available": False, "trend": [], "detail": "valency disabled"}
 
     cache_key = f"valency:trends:{hashlib.sha1(f'{keyword}|{category}'.encode()).hexdigest()}"
-    cached = await redis.get(cache_key)
+    cached = await cache_get(redis, cache_key)
     if cached:
         return {**json.loads(cached), "cached": True}
 
@@ -92,10 +90,7 @@ async def literature_trends(
         return _unavailable_detail(exc)
 
     payload = {"available": True, "keyword": keyword, "trend": trend}
-    await redis.set(
-        cache_key, json.dumps(payload),
-        ex=get_settings().valency_trends_ttl,
-    )
+    await cache_set(redis, cache_key, json.dumps(payload), get_settings().valency_trends_ttl)
     return payload
 
 
@@ -112,7 +107,7 @@ async def literature_related(
         return {"available": False, "results": [], "detail": "valency disabled"}
 
     cache_key = f"valency:related:{hashlib.sha1(f'{q}|{limit}'.encode()).hexdigest()}"
-    cached = await redis.get(cache_key)
+    cached = await cache_get(redis, cache_key)
     if cached:
         return {**json.loads(cached), "cached": True}
 
@@ -131,8 +126,5 @@ async def literature_related(
             merged.append(paper)
 
     payload = {"available": True, "query": q, "results": merged[: limit + 3]}
-    await redis.set(
-        cache_key, json.dumps(payload),
-        ex=get_settings().valency_search_ttl,
-    )
+    await cache_set(redis, cache_key, json.dumps(payload), get_settings().valency_search_ttl)
     return payload

@@ -61,3 +61,5 @@ report/build/
 # Local service data
 .opensearch/
 .minio/
+data/staging/*
+!data/staging/.gitkeep

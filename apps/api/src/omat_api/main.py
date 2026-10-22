@@ -9,6 +9,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from omat_api.routers import (
     admin,
@@ -20,6 +21,7 @@ from omat_api.routers import (
     search,
     suggest,
 )
+from omat_api.service import SearchBackendUnavailable
 from omat_api.settings import get_settings
 
 
@@ -50,6 +52,16 @@ def create_app() -> FastAPI:
     @application.get("/healthz", tags=["ops"])
     async def healthz() -> dict[str, str]:
         return {"status": "ok", "env": settings.env, "version": "0.1.0"}
+
+    # OpenSearch down -> 503 with a clear message, never an opaque 500.
+    @application.exception_handler(SearchBackendUnavailable)
+    async def _search_unavailable(
+        _: object, exc: SearchBackendUnavailable
+    ) -> JSONResponse:
+        return JSONResponse(
+            status_code=503,
+            content={"detail": "search backend unavailable", "reason": str(exc)},
+        )
 
     return application
 

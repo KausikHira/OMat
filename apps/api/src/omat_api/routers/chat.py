@@ -21,6 +21,7 @@ from redis.asyncio import Redis
 
 from omat_core.valency import Valency, ValencyClient, ValencyUnavailable
 
+from ..cache import cache_get, cache_set
 from ..deps import get_opensearch, get_redis
 from ..llm import GeminiProvider, LlmUnavailable
 from ..service import get_paper
@@ -107,7 +108,7 @@ async def paper_chat(
         )
 
     is_doi = id_or_doi.lower().startswith("10.")
-    paper = get_paper(
+    paper = await get_paper(
         client,
         doi=id_or_doi if is_doi else None,
         pii=None if is_doi else id_or_doi.upper(),
@@ -144,8 +145,8 @@ async def paper_chat(
                 except ValencyUnavailable as exc:
                     literature = [{"error": f"literature search unavailable: {exc}"}]
                 cache_key = f"valency:chat:{hashlib.sha1(query.encode()).hexdigest()}"
-                if not await redis.get(cache_key):
-                    await redis.set(cache_key, json.dumps(literature), ex=900)
+                if not await cache_get(redis, cache_key):
+                    await cache_set(redis, cache_key, json.dumps(literature), 900)
                 reply = await provider.complete(
                     SYSTEM_PROMPT, user_prompt,
                     tool_result=literature, tool_name=reply.tool_call.get("name"),

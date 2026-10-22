@@ -40,6 +40,7 @@
       "name": "@omat/api-client",
       "version": "0.0.0",
       "devDependencies": {
+        "@types/node": "^22.10.2",
         "openapi-typescript": "^7.5.0",
         "typescript": "^5.7.2",
       },

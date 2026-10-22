@@ -23,7 +23,8 @@ export type Measurement = {
   journal: string;
   journalSlug: string;
   year: number;
-  table: number;
+  // Not present in final_data.csv; API records leave this undefined.
+  table?: number;
   composition: string;
   elements: string[];
   amounts: ElementAmount[];

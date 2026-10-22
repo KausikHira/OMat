@@ -18,7 +18,7 @@ from opensearchpy import AsyncOpenSearch
 from omat_core.opensearch import ALIAS, build_search_query
 
 from ..deps import get_opensearch
-from ..service import parse_multi
+from ..service import SearchBackendUnavailable, parse_multi
 
 router = APIRouter(prefix="/aggregates", tags=["aggregates"])
 
@@ -65,7 +65,10 @@ async def aggregates(
                 "histogram": {"field": "property.value_si", "min_doc_count": 0},
             }},
         }
-        response = await client.search(index=ALIAS, body=body)
+        try:
+            response = await client.search(index=ALIAS, body=body)
+        except Exception as exc:
+            raise SearchBackendUnavailable(f"opensearch unreachable: {exc}") from exc
         buckets = response["aggregations"]["hist"]["buckets"]
         return {"kind": kind, "property": property,
                 "buckets": [{"x": b["key"], "count": b["doc_count"]} for b in buckets]}
@@ -75,7 +78,10 @@ async def aggregates(
             "query": query, "size": 0,
             "aggs": {"years": {"histogram": {"field": "year", "interval": 1, "min_doc_count": 0}}},
         }
-        response = await client.search(index=ALIAS, body=body)
+        try:
+            response = await client.search(index=ALIAS, body=body)
+        except Exception as exc:
+            raise SearchBackendUnavailable(f"opensearch unreachable: {exc}") from exc
         buckets = response["aggregations"]["years"]["buckets"]
         return {"kind": kind,
                 "buckets": [{"x": int(b["key"]), "count": b["doc_count"]} for b in buckets
@@ -86,7 +92,10 @@ async def aggregates(
             "query": query, "size": 0,
             "aggs": {"journals": {"terms": {"field": "journal.slug", "size": size}}},
         }
-        response = await client.search(index=ALIAS, body=body)
+        try:
+            response = await client.search(index=ALIAS, body=body)
+        except Exception as exc:
+            raise SearchBackendUnavailable(f"opensearch unreachable: {exc}") from exc
         buckets = response["aggregations"]["journals"]["buckets"]
         return {"kind": kind,
                 "buckets": [{"label": b["key"], "count": b["doc_count"]} for b in buckets]}
@@ -96,7 +105,10 @@ async def aggregates(
             "query": query, "size": 0,
             "aggs": {"pairs": {"terms": {"field": "elements", "size": size}}},
         }
-        response = await client.search(index=ALIAS, body=body)
+        try:
+            response = await client.search(index=ALIAS, body=body)
+        except Exception as exc:
+            raise SearchBackendUnavailable(f"opensearch unreachable: {exc}") from exc
         buckets = response["aggregations"]["pairs"]["buckets"]
         return {"kind": kind,
                 "buckets": [{"label": b["key"], "count": b["doc_count"]} for b in buckets]}
@@ -111,7 +123,10 @@ async def aggregates(
                 "aggs": {"avg_si": {"avg": {"field": "property.value_si"}}},
             }},
         }
-        response = await client.search(index=ALIAS, body=body)
+        try:
+            response = await client.search(index=ALIAS, body=body)
+        except Exception as exc:
+            raise SearchBackendUnavailable(f"opensearch unreachable: {exc}") from exc
         buckets = response["aggregations"]["by_year"]["buckets"]
         return {"kind": kind, "property": property,
                 "buckets": [{"x": int(b["key"]),

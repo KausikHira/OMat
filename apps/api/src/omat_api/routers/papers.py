@@ -10,6 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from opensearchpy import AsyncOpenSearch
 from redis.asyncio import Redis
 
+from ..cache import cache_get, cache_set
 from ..deps import get_opensearch, get_redis
 from ..service import get_paper
 
@@ -23,13 +24,13 @@ async def paper_detail(
     redis: Redis = Depends(get_redis),
 ) -> dict[str, Any]:
     cache_key = f"paper:{hashlib.sha1(id_or_doi.encode()).hexdigest()}"
-    cached = await redis.get(cache_key)
+    cached = await cache_get(redis, cache_key)
     if cached:
         return json.loads(cached)
 
     # A DOI looks like 10.xxxx/...; anything else is treated as a PII.
     is_doi = id_or_doi.lower().startswith("10.")
-    view = get_paper(
+    view = await get_paper(  # may raise SearchBackendUnavailable -> global 503
         client,
         doi=id_or_doi if is_doi else None,
         pii=None if is_doi else id_or_doi.upper(),
@@ -37,5 +38,5 @@ async def paper_detail(
     if view is None:
         raise HTTPException(status_code=404, detail="paper not found")
 
-    await redis.set(cache_key, json.dumps(view), ex=300)
+    await cache_set(redis, cache_key, json.dumps(view), 300)
     return view

@@ -6,9 +6,9 @@ import { ResultRow } from "@/components/result-row";
 import { SearchForm } from "@/components/search-form";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Wordmark } from "@/components/wordmark";
-import { MEASUREMENTS } from "@/lib/mock-records";
+import { fetchFacetPanels, fetchMeasurements } from "@/lib/api";
 import type { SearchState, SortKey } from "@/lib/search";
-import { buildSearchHref, getFacets, parseSearchParams, searchMeasurements } from "@/lib/search";
+import { buildSearchHref, parseSearchParams } from "@/lib/search";
 
 export const metadata: Metadata = {
   title: "Search",
@@ -21,24 +21,12 @@ type SearchPageProps = {
 export default async function SearchPage({ searchParams }: SearchPageProps) {
   const query: SearchState = parseSearchParams(await searchParams);
 
-  const results = searchMeasurements(MEASUREMENTS, query);
-
-  // Facet counts include every active filter except the facet's own field, so
-  // selecting a property does not hide the other properties from the rail.
-  const facets = {
-    elements: getFacets(
-      searchMeasurements(MEASUREMENTS, { ...query, elements: [], sort: "relevance" }),
-    ).elements,
-    applications: getFacets(
-      searchMeasurements(MEASUREMENTS, { ...query, applications: [], sort: "relevance" }),
-    ).applications,
-    properties: getFacets(
-      searchMeasurements(MEASUREMENTS, { ...query, property: undefined, sort: "relevance" }),
-    ).properties,
-    journals: getFacets(
-      searchMeasurements(MEASUREMENTS, { ...query, journal: undefined, sort: "relevance" }),
-    ).journals,
-  };
+  // Live API first; mock records only when the API is unreachable.
+  const [{ measurements: results, total }, facetPanels] = await Promise.all([
+    fetchMeasurements(query),
+    fetchFacetPanels(query),
+  ]);
+  const facets = facetPanels.facets;
   const hasFacets =
     facets.elements.length > 0 ||
     facets.applications.length > 0 ||
@@ -100,8 +88,8 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
           <section>
             <div className="flex flex-wrap items-baseline justify-between gap-3">
               <p className="text-[13px] text-muted">
-                <span className="font-medium text-ink">{results.length}</span>{" "}
-                {results.length === 1 ? "measurement" : "measurements"}
+                <span className="font-medium text-ink">{total}</span>{" "}
+                {total === 1 ? "measurement" : "measurements"}
                 {query.q ? (
                   <>
                     {" "}
@@ -185,7 +173,9 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
       </main>
 
       <footer className="mx-auto flex w-full max-w-5xl items-center justify-between gap-6 border-t border-line px-5 py-6 text-[11px] text-muted sm:px-8">
-        <span>Prototype index. The API and full dataset are not wired yet.</span>
+        <span>
+          {facetPanels.source === "api" ? "Live API." : "API unreachable — showing mock records."}
+        </span>
         <span className="shrink-0">OMAT-SE</span>
       </footer>
     </div>

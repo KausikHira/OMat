@@ -30,4 +30,4 @@ async def facets(
         "journal": parse_multi(journal),
         "application": parse_multi(app),
     }
-    return facet_counts(client, q=q, filters=filters, fields=wanted)
+    return await facet_counts(client, q=q, filters=filters, fields=wanted)

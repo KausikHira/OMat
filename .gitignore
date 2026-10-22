@@ -1,0 +1,63 @@
+# OS / editors
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+build/
+dist/
+
+# Node / Bun / Next.js
+node_modules/
+.next/
+out/
+.turbo/
+.vercel/
+*.tsbuildinfo
+bun.lockb
+
+# Generated API reference
+docs/api/openapi.json
+_site/
+
+# Environment
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Data: keep directories, not payloads
+data/raw/*
+!data/raw/.gitkeep
+data/rejects/*
+!data/rejects/.gitkeep
+data/samples/*
+!data/samples/.gitkeep
+
+# LaTeX
+report/build/
+*.aux
+*.bbl
+*.blg
+*.fdb_latexmk
+*.fls
+*.log
+*.out
+*.synctex.gz
+*.toc
+
+# Local service data
+.opensearch/
+.minio/

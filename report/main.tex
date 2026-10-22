@@ -1,0 +1,202 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage[margin=1in]{geometry}
+\usepackage{microtype}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{caption}
+\usepackage{natbib}
+\usepackage[hidelinks]{hyperref}
+
+\captionsetup{font=small,labelfont=bf}
+
+\title{%
+  \textbf{OMAT-SE}\\[0.35em]
+  \large A Faceted Search Engine for Materials Property Data
+}
+\author{Darshan Jaidka}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+Materials property data is scattered across journal tables and published as
+unstructured text, which makes comparison across compositions and applications
+slow. This report describes OMAT-SE, a search system built around a curated
+corpus of measurement records. Each record links a paper to an elemental
+composition, a measured property with its unit, a journal, a table reference,
+and an application group. The system combines BM25 retrieval, faceted filtering,
+and aggregation-backed visualisations, and exposes the same domain layer through
+a REST API and a Model Context Protocol server. A per-paper chat interface
+answers questions from the paper's own measurement rows and cites the records it
+uses. This document defines the data contract, the architecture, the ranking and
+filtering design, and the evaluation plan.
+\end{abstract}
+
+\section{Introduction}
+
+Searching materials literature usually means recalling a composition, guessing a
+property name, and scanning tables by hand. The underlying data is relational:
+papers report compositions; compositions have measured properties; properties are
+associated with applications. A useful search engine therefore has to support
+three different entry points at once: an exact material label, an elemental
+constraint such as ``contains Al and Cr'', and a numeric range such as ``Young's
+modulus above 400~GPa''.
+
+Structured efforts such as the Materials Project demonstrate the value of
+queryable property data \citep{jain2013}, yet a large share of published
+measurements remains locked in journal tables. OMAT-SE treats the measurement as
+the primary entity. A paper is a grouping and a provenance record, not the unit
+of retrieval. This choice keeps facet counts honest and makes numeric filters
+cheap. The contributions described here are
+(i) a canonical data contract for the source CSV, (ii) an OpenSearch index and
+query design for faceted materials search, (iii) a per-paper chat interface that
+does not require a retrieval-augmented generation pipeline, and (iv) a
+reproducible evaluation plan.
+
+\section{Data}
+
+The source is a CSV with eleven columns. Composition, property, element, and
+application cells are Python literals, so parsing uses \texttt{ast.literal\_eval}
+rather than regular expressions. Table~\ref{tab:columns} summarises the mapping
+from source columns to canonical fields.
+
+\begin{table}[htbp]
+  \centering
+  \small
+  \begin{tabular}{@{}llp{0.42\linewidth}@{}}
+    \toprule
+    Source column & Canonical field & Treatment \\
+    \midrule
+    Article PII & \texttt{article\_pii} & Publisher Item Identifier; keyword \\
+    DOI & \texttt{doi} & Lowercased, prefix stripped; keyword \\
+    Table No. & \texttt{table\_nos} & Integer list; provenance in the UI \\
+    ID & \texttt{legacy\_id} & Source label; checked for cross-paper reuse \\
+    Proxy\_ID & \texttt{proxy\_id} & Primary record key \\
+    Composition & \texttt{composition} & Label plus authoritative elemental amounts \\
+    Property & \texttt{property} & Name, value, unit; one document per property \\
+    Journal\_Name & \texttt{journal} & Underscores expanded; slug facet \\
+    Elements & \texttt{elements} & Validated against the composition amounts \\
+    APL\_Group & \texttt{applications} & Application taxonomy and slug \\
+    Date & \texttt{year} & Integer range filter and histogram \\
+    \bottomrule
+  \end{tabular}
+  \caption{Source columns and their canonical representation. \texttt{Paper\_Link}
+  is derived from the DOI and is not present in the source.}
+  \label{tab:columns}
+\end{table}
+
+A sample record has composition label \texttt{TiAl70CrN} with measured amounts
+Al~95.89, Cr~1.37, N~1.37, and Ti~1.37 in mol\%, and a Young's modulus of
+467~GPa. The label is not a stoichiometric formula: the amounts are the
+authoritative representation. This distinction matters because a formula parser
+would silently produce a composition that contradicts the measurement.
+
+\subsection{Cleaning and validation}
+
+Cells are parsed into typed values and validated before indexing. Rejected rows
+are written to a rejects directory with the original line and a machine-readable
+reason. The rules are deliberately conservative: elemental amounts must sum to
+$100 \pm 0.5$; the element set must match the composition list; units must exist
+in a curated unit table; years must fall between 1900 and 2027; and every DOI
+must match the standard prefix pattern. DOIs also provide a stable path to
+publisher metadata and landing pages \citep{hendricks2020}. Rows with an empty
+application group are labelled \texttt{unclassified} rather than dropped.
+
+Property names and journals are normalised through curated YAML taxonomies.
+These files are reviewed as data, not inferred in code, because a wrong mapping
+is a silent search failure. Raw labels are always preserved next to normalised
+ones so that users can verify a record against the source table.
+
+\section{Architecture}
+
+The system is split into five deployable units. A Next.js application renders
+search and paper pages on the server and is deployed on Vercel. A FastAPI service
+validates requests, applies caching, and shapes responses. A shared Python package
+contains the domain models, cleaning rules, and OpenSearch query builders. An
+ingestion CLI performs validation and bulk indexing. A small Model Context
+Protocol server exposes the same search tools to agents.
+
+API requests pass through CloudFront and an application load balancer. Redis
+caches first-page results, facet counts, and autocomplete suggestions. OpenSearch
+is never exposed publicly. PostgreSQL stores saved searches, job metadata, and
+chat sessions. Source CSVs, staging files, and index snapshots live in object
+storage. The OpenAPI schema is rendered as a static reference on GitHub Pages.
+
+Indices are versioned. A new index is built as \texttt{papers\_vN}, smoke-tested
+against a fixed query set, and then made visible through an alias swap. Cache keys
+include the alias version, so a reindex cannot serve stale results. Kafka is
+deliberately deferred: at this corpus size a CLI job is simpler, and the worker
+entry point already exists for the day replay or multiple consumers justify a
+broker.
+
+\section{Search and ranking}
+
+The index stores one document per measurement property. Each document carries a
+single property name, value, and unit, which makes terms aggregations and range
+filters straightforward. Documents are grouped by \texttt{proxy\_id} for display
+and by DOI for paper pages.
+
+Text retrieval uses a multi-field BM25 query with boosts on the composition
+label, property name, application, and journal, plus a catch-all field, following
+the retrieval and aggregation model described by \citet{gormley2015}. Elements
+are indexed as keywords, so ``Al and Cr'' is a filter rather than a text match.
+Numeric filters apply to \texttt{property.value}, and the active property
+determines the range slider. Filtering follows OR within a field and AND across
+fields, matching the expectations of faceted search interfaces.
+
+Pagination uses \texttt{search\_after} with an opaque cursor. Deep pagination is
+not cached; only the first page is. Aggregations for charts are cached
+separately and refreshed on ingest. Phase two adds composition similarity: a
+118-dimensional, periodic-table-ordered vector supports a k-nearest-neighbour
+query, which is chemically meaningful and avoids text embeddings entirely.
+
+\section{Per-paper chat}
+
+The chat interface answers questions about one paper at a time. Its context is
+the paper's measurement rows rather than extracted PDF text. For typical papers
+the rows fit in a single prompt; for larger ones the model receives read-only
+tools to query, aggregate, and fetch records. Every numeric answer must cite a
+\texttt{proxy\_id} and table number, and the prompt instructs the model to say
+that a value is absent rather than infer one.
+
+This design avoids a chunk index, an embedding pipeline, and a vector database.
+It also sets a clear expectation: the assistant can compare and summarise the
+dataset, but it cannot explain a measurement method or a heat treatment that the
+corpus does not record.
+
+\section{Evaluation plan}
+
+Evaluation uses three complementary methods. First, a known-item set of queries
+built from held-out records measures recall and mean reciprocal rank. Second, a
+graded relevance set for faceted queries measures nDCG at ten. Third, operational
+metrics cover p95 latency, facet computation time, and cache hit rate. The
+ingestion pipeline is evaluated separately through rejection rate and reason
+distribution, because silent cleaning failures are more damaging than slow
+queries.
+
+Chat quality is assessed on a small question set per paper with three outcomes:
+correct and cited, correct but uncited, and unsupported. Unsupported answers are
+the primary failure mode and are tracked explicitly.
+
+\section{Conclusion}
+
+OMAT-SE is a search engine for measurement records, not a document search engine
+with a materials theme. Treating composition and property as first-class,
+filterable entities produces a simpler index, cheaper facets, and a chat
+interface that can be grounded without a retrieval pipeline. The remaining work
+is implementation: the canonical models, the cleaning pipeline, the index
+mapping, and the search handlers.
+
+\bibliographystyle{plainnat}
+\bibliography{references}
+
+\end{document}

@@ -1,0 +1,7 @@
+# Python workspace. Local packages are installed editable so `omat_core` and friends
+# are importable from every app without publishing anything.
+-e ./packages/py-core
+-e ./packages/py-ingest
+-e ./apps/api
+-e ./apps/mcp
+-e ./apps/workers

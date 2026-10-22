@@ -1,0 +1,31 @@
+OMAT-SE
+
+Faceted search over materials composition and property measurements.
+Status: skeleton.
+
+Repository
+  apps/api       FastAPI service
+  apps/mcp       MCP server (Python SDK)
+  apps/web       Next.js UI, deployed on Vercel
+  apps/workers   Async consumers (phase 2)
+  packages/      Shared Python domain, ingestion CLI, generated TypeScript client
+  data/          Source CSVs, taxonomy, index mappings
+  infra/         Docker and Terraform
+  docs/          Architecture, schema, ADRs, API reference
+  report/        LaTeX write-up
+
+Local setup
+  cp .env.example .env
+  cp apps/web/.env.example apps/web/.env.local
+  just up
+  just install
+  just dev-api
+  bun install
+  just web-dev
+  just docs      # local API reference on http://localhost:8080
+
+Requirements: Python 3.11+, Bun, Docker.
+Architecture: docs/architecture.md
+Schema: docs/schema.md
+API reference: docs/api/index.html (published to GitHub Pages)
+License: MIT

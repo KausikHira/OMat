@@ -1,0 +1,9 @@
+OMAT-SE security policy
+
+Report vulnerabilities privately through GitHub security advisories.
+Do not open a public issue for a suspected vulnerability.
+
+Never commit .env files, API keys, or source datasets.
+OpenSearch must not be exposed to the public internet.
+The per-paper chat endpoint sends dataset rows to a third-party model provider;
+review that before enabling it on confidential data.

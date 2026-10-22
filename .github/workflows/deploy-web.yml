@@ -1,0 +1,54 @@
+name: deploy-web
+
+# Production deploy for apps/web through the Vercel CLI.
+#
+# Setup:
+#   1. Vercel project Root Directory: apps/web
+#   2. Repository secrets: VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID
+#   3. If you keep Vercel's Git integration enabled, disable this workflow or
+#      turn off automatic Git deployments to avoid deploying twice.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/web/**"
+      - "packages/api-client/**"
+      - "package.json"
+      - "bun.lock"
+      - "turbo.json"
+      - ".github/workflows/deploy-web.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-web
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install workspace
+        run: bun install --frozen-lockfile
+
+      - name: Pull Vercel environment
+        run: bunx vercel@latest pull --yes --environment=production --token="$VERCEL_TOKEN"
+
+      - name: Build
+        run: bunx vercel@latest build --prod --token="$VERCEL_TOKEN"
+
+      - name: Deploy
+        run: bunx vercel@latest deploy --prebuilt --prod --token="$VERCEL_TOKEN"

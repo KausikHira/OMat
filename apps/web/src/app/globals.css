@@ -1,0 +1,11 @@
+@import "tailwindcss";
+
+:root {
+  color-scheme: dark;
+}
+
+body {
+  background-image: radial-gradient(circle at 15% -10%, rgb(45 212 191 / 0.12), transparent 40%),
+    radial-gradient(circle at 85% 0%, rgb(129 140 248 / 0.1), transparent 35%);
+  background-repeat: no-repeat;
+}

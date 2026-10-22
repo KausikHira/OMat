@@ -1,0 +1,24 @@
+# Tooling configuration only. Python dependencies live in the per-package
+# pyproject.toml files and are installed through requirements-dev.txt.
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["apps", "packages"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["omat_core", "omat_api", "omat_mcp", "omat_workers", "omat_ingest"]
+
+[tool.pytest.ini_options]
+testpaths = ["apps", "packages"]
+addopts = "-q"
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_unused_ignores = true
+ignore_missing_imports = true
+files = ["apps", "packages"]

@@ -1,0 +1,24 @@
+{
+  "name": "omat-se",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Faceted search engine for materials composition and property data",
+  "packageManager": "bun@1.4.3",
+  "workspaces": [
+    "apps/web",
+    "packages/api-client"
+  ],
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "typecheck": "turbo run typecheck",
+    "lint": "turbo run lint",
+    "format": "biome format --write .",
+    "gen:api": "turbo run gen"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
+    "turbo": "^2.3.3",
+    "typescript": "^5.7.2"
+  }
+}

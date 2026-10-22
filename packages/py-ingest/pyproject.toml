@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "omat-ingest"
+version = "0.1.0"
+description = "CSV validation and OpenSearch indexing CLI for OMAT-SE"
+requires-python = ">=3.11"
+dependencies = [
+    "pydantic>=2.9",
+    "PyYAML>=6.0",
+]
+
+[project.scripts]
+omat-ingest = "omat_ingest.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]

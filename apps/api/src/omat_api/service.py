@@ -11,6 +11,7 @@ from typing import Any
 
 from opensearchpy import AsyncOpenSearch
 
+from omat_core.gsc import GscRow
 from omat_core.opensearch import (
     ALIAS,
     FACET_AGGS,
@@ -18,31 +19,49 @@ from omat_core.opensearch import (
     parse_cursor,
     search_after_cursor,
 )
-from omat_core.gsc import GscRow
 
 
 class SearchBackendUnavailable(RuntimeError):
     """OpenSearch unreachable/timeout. Routers map this to 503."""
 
+
 SORT_OPTIONS = {
-    "relevance": [("_score", "desc"), ("record_id", "asc")],
-    "year_desc": [("year", "desc"), ("record_id", "asc")],
-    "year_asc": [("year", "asc"), ("record_id", "asc")],
-    "value_asc": [("property.value_si", "asc"), ("record_id", "asc")],
-    "value_desc": [("property.value_si", "desc"), ("record_id", "asc")],
+    # OpenSearch sort must be a list of {"field": "order"} dicts (or strings),
+    # not tuples: json.dumps of tuples -> [["year","desc"]] -> 400.
+    "relevance": [{"_score": "desc"}, {"record_id": "asc"}],
+    "year_desc": [{"year": "desc"}, {"record_id": "asc"}],
+    "year_asc": [{"year": "asc"}, {"record_id": "asc"}],
+    "value_asc": [{"property.value_si": "asc"}, {"record_id": "asc"}],
+    "value_desc": [{"property.value_si": "desc"}, {"record_id": "asc"}],
 }
 
 FACET_FIELDS = ("elements", "property", "journal", "application")
 
 SOURCE_FIELDS = [
-    "record_id", "row_index", "article_pii", "doi", "paper_link",
-    "has_composition", "has_property",
-    "composition.canonical", "composition.label", "composition.elements",
-    "property.name", "property.slug", "property.value", "property.unit",
-    "property.value_si", "elements", "species",
-    "journal.name", "journal.slug", "year",
-    "applications.raw", "applications.slug",
-    "title", "abstract",
+    "record_id",
+    "row_index",
+    "article_pii",
+    "doi",
+    "paper_link",
+    "has_composition",
+    "has_property",
+    "composition.canonical",
+    "composition.label",
+    "composition.elements",
+    "property.name",
+    "property.slug",
+    "property.value",
+    "property.unit",
+    "property.value_si",
+    "elements",
+    "species",
+    "journal.name",
+    "journal.slug",
+    "year",
+    "applications.raw",
+    "applications.slug",
+    "title",
+    "abstract",
 ]
 
 
@@ -101,11 +120,11 @@ async def search_records(
         sort_name = "relevance"  # value sorts need a property selected
 
     if cursor:
-        sort_values, record_id = parse_cursor(cursor)
-        body["search_after"] = [*sort_values, record_id]
-        body["sort"] = SORT_OPTIONS[sort_name]
-    else:
-        body["sort"] = SORT_OPTIONS[sort_name]
+        # Cursor holds the verbatim sort tuple from the previous page,
+        # INCLUDING the record_id tiebreaker (see search_after_cursor).
+        sort_values, _tiebreak = parse_cursor(cursor)
+        body["search_after"] = sort_values
+    body["sort"] = SORT_OPTIONS[sort_name]
 
     start = time.perf_counter()
     try:
@@ -118,11 +137,12 @@ async def search_records(
     total = hits["total"]["value"] if isinstance(hits["total"], dict) else hits["total"]
     records = [hit["_source"] for hit in hits["hits"]]
 
+    # OpenSearch returns the full sort tuple (incl. the record_id tiebreaker)
+    # in each hit's "sort"; the cursor is that tuple verbatim.
     next_cursor = None
     if records and len(records) == limit:
         last = hits["hits"][-1]
-        sort_values = last.get("sort", [])[:-1]
-        next_cursor = search_after_cursor(sort_values, last["_source"]["record_id"])
+        next_cursor = search_after_cursor(last.get("sort", []), last["_source"]["record_id"])
 
     return {"data": records, "total": total, "took_ms": took_ms, "cursor": next_cursor}
 
@@ -149,9 +169,7 @@ async def facet_counts(
     facets: dict[str, Any] = {}
     for name, bucket in response["aggregations"].items():
         if "buckets" in bucket:
-            facets[name] = [
-                {"value": b["key"], "count": b["doc_count"]} for b in bucket["buckets"]
-            ]
+            facets[name] = [{"value": b["key"], "count": b["doc_count"]} for b in bucket["buckets"]]
     facets["property_stats"] = response["aggregations"].get("property_stats", {})
     return facets
 
@@ -211,9 +229,7 @@ async def fetch_gsc_rows(
             rows.append(
                 GscRow(
                     article_pii=source.get("article_pii") or "",
-                    canonical=composition.get("canonical")
-                    or composition.get("label")
-                    or "",
+                    canonical=composition.get("canonical") or composition.get("label") or "",
                     elements=tuple(source.get("elements") or []),
                     slug=(source.get("property") or {}).get("slug") or "",
                     name=(source.get("property") or {}).get("name") or "",
@@ -228,7 +244,10 @@ async def fetch_gsc_rows(
 
 
 async def get_paper(
-    client: AsyncOpenSearch, *, doi: str | None = None, pii: str | None = None,
+    client: AsyncOpenSearch,
+    *,
+    doi: str | None = None,
+    pii: str | None = None,
     size: int = 1000,
 ) -> dict[str, Any] | None:
     """All records for one paper, grouped view built by the router."""

@@ -146,9 +146,16 @@ export function buildSearchQuery(params: SearchParams): string {
 
 // ---- Endpoints ---------------------------------------------------------------
 
+/**
+ * Default request timeout. Without it a wedged API worker stalls SSR for as
+ * long as the socket lives (observed: 155s pages while the API reloaded a
+ * broken router); with it the caller falls back to mock data after 10s.
+ */
+const REQUEST_TIMEOUT_MS = 10_000;
+
 async function getJson<T>(path: string, signal?: AbortSignal): Promise<T> {
   const response = await fetch(`${apiBaseUrl()}${path}`, {
-    signal,
+    signal: signal ?? AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     // Next.js SSR fetch caches aggressively; API responses must stay fresh.
     cache: "no-store",
   });

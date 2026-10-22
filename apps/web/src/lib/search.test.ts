@@ -2,7 +2,13 @@ import { describe, expect, test } from "bun:test";
 
 import { MEASUREMENTS } from "./mock-records";
 import type { SearchState } from "./search";
-import { buildSearchHref, getFacets, parseSearchParams, searchMeasurements } from "./search";
+import {
+  buildSearchHref,
+  formatValue,
+  getFacets,
+  parseSearchParams,
+  searchMeasurements,
+} from "./search";
 
 const empty: SearchState = {
   q: "",
@@ -117,5 +123,27 @@ describe("buildSearchHref", () => {
     expect(buildSearchHref({ ...empty, q: "coatings", tab: "plots", page: 2 })).toBe(
       "/search?q=coatings&tab=plots&page=2",
     );
+  });
+});
+
+describe("formatValue", () => {
+  test("keeps human-scale numbers plain", () => {
+    expect(formatValue(467)).toBe("467");
+    expect(formatValue(1.3)).toBe("1.3");
+    expect(formatValue(0)).toBe("0");
+  });
+
+  test("does not round tiny magnitudes to zero", () => {
+    // Real index data: aerogel-like densities around 1e-9 g/cm³.
+    expect(formatValue(1.04e-9)).toBe("1.04×10⁻⁹");
+    expect(formatValue(4.8e-7)).toBe("4.80×10⁻⁷");
+  });
+
+  test("uses scientific notation for huge magnitudes", () => {
+    expect(formatValue(4.67e11)).toBe("4.67×10¹¹");
+  });
+
+  test("degrades gracefully for non-finite values", () => {
+    expect(formatValue(Number.NaN)).toBe("—");
   });
 });

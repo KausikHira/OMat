@@ -37,6 +37,7 @@ async def start_ingest(csv_path: str = "data/final_data.csv") -> dict[str, Any]:
         job["finished"] = time.time()
 
     import asyncio
+
     asyncio.create_task(_await_completion())
     return {"job_id": job_id, "status": "running"}
 

@@ -44,8 +44,12 @@ def test_chaikin_smooth_grows_and_rounds() -> None:
     square = [(0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0)]
     smoothed = chaikin_smooth(square, iterations=2)
     assert len(smoothed) == 16  # 4 -> 8 -> 16, closed polygon
-    assert all(x >= 0 and y >= 0 for x, y in smoothed)
-    assert all(0 < x < 1 for x, _ in smoothed)  # corners cut inward
+    # Every output is a convex combination of hull vertices, so nothing can
+    # leave the hull. Points ON an edge stay on it (Chaikin cuts corners, it
+    # does not shrink edges), so the bounds are inclusive.
+    assert all(0 <= x <= 1 and 0 <= y <= 1 for x, y in smoothed)
+    # The sharp corners themselves are gone after two rounds of cutting.
+    assert all(corner not in smoothed for corner in square)
 
 
 def test_build_gsc_pairs_materials_and_ranks_families() -> None:
@@ -61,7 +65,7 @@ def test_build_gsc_pairs_materials_and_ranks_families() -> None:
         row("P2", "c1", ("Ba", "O"), "hardness", 2.0, "Hardness", "GPa"),
         row("P2", "c1", ("Ba", "O"), "density", 5.0, "Density", "g/cm³"),
         row("P2", "c2", ("Ba", "O"), "hardness", 2.5, "Hardness", "GPa"),
-        row("P2", "c2", ("Ba", "O"), "density", 5.5, "Density", "g/cm³"),
+        row("P2", "c2", ("Ba", "O"), "density", 5.7, "Density", "g/cm³"),
         row("P2", "c3", ("Ba", "O"), "hardness", 3.0, "Hardness", "GPa"),
         row("P2", "c3", ("Ba", "O"), "density", 6.0, "Density", "g/cm³"),
         # hardness only: never paired
@@ -107,3 +111,25 @@ def test_build_gcs_skips_degenerate_families() -> None:
 
     assert chart["families"] == []
     assert chart["total_points"] == 4
+
+
+def test_build_gsc_skips_collinear_family() -> None:
+    """A collinear family's hull collapses to 2 vertices: no blob to draw.
+
+    Regression test: scipy's ConvexHull raises on this input, so the family
+    must be skipped, never emitted with a degenerate 2-point hull.
+    """
+    rows = [
+        # all three points sit on y = x + 3
+        row("P", "c1", ("Ba", "O"), "hardness", 2.0, "Hardness", "GPa"),
+        row("P", "c1", ("Ba", "O"), "density", 5.0, "Density", "g/cm³"),
+        row("P", "c2", ("Ba", "O"), "hardness", 2.5, "Hardness", "GPa"),
+        row("P", "c2", ("Ba", "O"), "density", 5.5, "Density", "g/cm³"),
+        row("P", "c3", ("Ba", "O"), "hardness", 3.0, "Hardness", "GPa"),
+        row("P", "c3", ("Ba", "O"), "density", 6.0, "Density", "g/cm³"),
+    ]
+
+    chart = build_gsc(rows, "hardness", "density")
+
+    assert chart["families"] == []
+    assert chart["total_points"] == 3

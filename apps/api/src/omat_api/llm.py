@@ -45,10 +45,17 @@ class GeminiProvider:
             contents = [
                 {"role": "user", "parts": [{"text": user}]},
                 {"role": "model", "parts": [{"functionCall": {"name": tool_name, "args": {}}}]},
-                {"role": "user", "parts": [{
-                    "functionResponse": {"name": tool_name,
-                                         "response": {"result": json.dumps(tool_result)[:20000]}}},
-                ]},
+                {
+                    "role": "user",
+                    "parts": [
+                        {
+                            "functionResponse": {
+                                "name": tool_name,
+                                "response": {"result": json.dumps(tool_result)[:20000]},
+                            }
+                        },
+                    ],
+                },
             ]
         body: dict[str, Any] = {
             "system_instruction": {"parts": [{"text": system}]},

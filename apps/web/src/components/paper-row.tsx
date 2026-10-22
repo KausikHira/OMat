@@ -63,21 +63,34 @@ export function PaperRow({ paper }: PaperRowProps) {
         </p>
 
         <ul className="mt-4 flex flex-wrap gap-2">
-          {paper.records.map((record) => (
-            <li
-              key={record.id}
-              className="inline-flex flex-wrap items-baseline gap-x-1.5 rounded-[4px] border border-line px-2 py-1 text-[11px]"
-            >
-              <span className="font-medium text-ink">{record.composition}</span>
-              <span className="text-muted">{record.property.name}</span>
-              <span className="font-medium text-ink tabular-nums">
-                {formatValue(record.property.value)}
-                {record.property.unit ? (
-                  <span className="ml-0.5 font-normal text-muted">{record.property.unit}</span>
+          {paper.records.map((record) => {
+            const hasComposition = record.composition.trim().length > 0;
+            const hasProperty = record.property.name.trim().length > 0;
+            if (!hasComposition && !hasProperty) return null;
+            return (
+              <li
+                key={record.id}
+                className="inline-flex flex-wrap items-baseline gap-x-1.5 rounded-[4px] border border-line px-2 py-1 text-[11px]"
+              >
+                {hasComposition ? (
+                  <span className="font-medium text-ink">{record.composition}</span>
                 ) : null}
-              </span>
-            </li>
-          ))}
+                {hasProperty ? (
+                  <>
+                    <span className="text-muted">{record.property.name}</span>
+                    <span className="font-medium text-ink tabular-nums">
+                      {formatValue(record.property.value)}
+                      {record.property.unit ? (
+                        <span className="ml-0.5 font-normal text-muted">
+                          {record.property.unit}
+                        </span>
+                      ) : null}
+                    </span>
+                  </>
+                ) : null}
+              </li>
+            );
+          })}
         </ul>
 
         <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-muted">

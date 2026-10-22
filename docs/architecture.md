@@ -1,6 +1,8 @@
 # Architecture
 
-Status: skeleton. The topology and contracts are fixed; implementations land in phases.
+Status: phase 0 → 1 in progress. The topology and contracts are fixed; the
+search path (API + web + MCP) is implemented, and infrastructure work
+(Terraform, auth, Kafka) is still ahead.
 
 ## Topology
 
@@ -26,12 +28,12 @@ Ingest: CSV → validate/normalize → JSONL → bulk index → smoke test → a
 
 | Layer | Responsibility | Current state |
 | --- | --- | --- |
-| `apps/web` | SSR search and paper pages, Plotly charts, chat panel | Landing page only; deploys to Vercel |
-| `apps/api` | HTTP validation, auth, caching, response shaping | `/healthz` only; `/v1/*` stubs |
-| `packages/py-core` | Models, cleaning, taxonomy, query DSL | Docstrings and contracts |
-| `packages/py-ingest` | CSV → validated records → index | CLI stub |
-| `apps/mcp` | Agent-facing tools | Tool signatures only |
-| `apps/workers` | Async consumers | Idle entry point |
+| `apps/web` | SSR search and paper pages, Plotly charts, chat panel | Search UI + Plots tab live (see [plots.md](plots.md)); paper/chat pages pending |
+| `apps/api` | HTTP validation, auth, caching, response shaping | `/v1/search`, `/facets`, `/suggest`, `/papers`, `/aggregates`, `/literature`, `/chat` live; auth/rate limits pending |
+| `packages/py-core` | Models, cleaning, taxonomy, query DSL, GSC chart math | Implemented (see [search.md](search.md)); text enrichment pending |
+| `packages/py-ingest` | CSV → validated records → index | CLI implemented |
+| `apps/mcp` | Agent-facing tools | `search_records`, `get_paper`, `facet_counts`, literature tools live |
+| `apps/workers` | Async consumers | Idle entry point (phase 2) |
 | `docs/api` | Static Scalar reference generated from FastAPI | Shell page + Pages workflow |
 | `infra` | Local compose, Terraform skeleton | Compose stack |
 
@@ -41,12 +43,17 @@ being reimplemented.
 
 ## Search request flow
 
+Full semantics: [search.md](search.md). Plots/aggregates: [plots.md](plots.md).
+
 1. The browser (served by Vercel) calls `GET https://api.<domain>/v1/search`
    through CloudFront and the ALB.
 2. FastAPI validates parameters with pydantic and checks the Redis cache using a
    key of normalized query string plus index alias version.
-3. `py-core` builds the OpenSearch request: `multi_match` for text, `bool.filter`
-   for facets, `search_after` for pagination.
+3. `py-core` interprets the query first: conversational filler is dropped and
+   domain words are mapped through the curated intent lexicon
+   (`data/taxonomy/intents.yaml`) to application/property facet boosts plus an
+   expanded text query. It then builds the OpenSearch request: `multi_match`
+   for text, `bool.filter` for explicit facets, `search_after` for pagination.
 4. Hits are normalized, links are derived from DOI values, and the envelope is
    cached for 60 seconds.
 5. An anonymized search event is emitted (phase 2) and never stored with an IP.

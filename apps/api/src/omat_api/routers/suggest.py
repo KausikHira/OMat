@@ -41,9 +41,11 @@ async def suggest(
             "bool": {
                 "minimum_should_match": 1,
                 "should": [
-                    {"match_bool_prefix": {
-                        "composition.canonical": {"query": q, "_name": "formula"},
-                    }},
+                    {
+                        "match_bool_prefix": {
+                            "composition.canonical": {"query": q, "_name": "formula"},
+                        }
+                    },
                     {"prefix": {"elements": {"value": q.upper(), "_name": "element"}}},
                     {"match_bool_prefix": {"property.name": {"query": q, "_name": "property"}}},
                     {"match_bool_prefix": {"journal.name": {"query": q, "_name": "journal"}}},

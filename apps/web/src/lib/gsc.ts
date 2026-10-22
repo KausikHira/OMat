@@ -191,6 +191,11 @@ export function buildGscChart(
       x: Math.max(point.x, 0),
       y: Math.max(point.y, 0),
     }));
+    if (hull.length < MIN_UNIQUE_POINTS) {
+      // Collinear points: the chain collapses them to a 2-vertex "hull"
+      // with no area — there is no blob to draw.
+      continue;
+    }
     families.push({
       family,
       count: points.length,

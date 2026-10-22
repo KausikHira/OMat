@@ -83,9 +83,7 @@ def test_gsc_aggregate_validates_params() -> None:
     app.dependency_overrides[get_opensearch] = lambda: FakeOpenSearch([])
     try:
         with TestClient(app) as client:
-            missing = client.get(
-                "/v1/aggregates", params={"kind": "gsc", "property_a": "hardness"}
-            )
+            missing = client.get("/v1/aggregates", params={"kind": "gsc", "property_a": "hardness"})
             same = client.get(
                 "/v1/aggregates",
                 params={

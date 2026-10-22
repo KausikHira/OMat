@@ -12,6 +12,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from ..query_interpret import interpret_query
 from .client import bulk_index, count_all, ensure_index, make_client
 from .mapping import ALIAS, INDEX_VERSION, index_name, papers_mapping
 
@@ -31,6 +32,22 @@ __all__ = [
 ]
 
 
+TEXT_FIELDS = [
+    "title^4",
+    "composition.label^3",
+    "composition.canonical^3",
+    "search_text^3",
+    "applications.raw^2",
+    "property.name^2",
+    "abstract^1",
+]
+
+# Facet slugs implied by the wording rank above plain text matches but never
+# filter: a question like "house near a riverbed" must not AND out records
+# that only match the text.
+INTENT_BOOST = 8
+
+
 def build_search_query(
     q: str | None,
     filters: dict[str, list[str]],
@@ -38,25 +55,38 @@ def build_search_query(
     property_slug: str | None = None,
 ) -> dict[str, Any]:
     """BM25 query with the agreed boosts and filter semantics:
-    OR within a field, AND across fields. Filters are term-level only."""
+    OR within a field, AND across fields. Filters are term-level only.
+
+    ``q`` is interpreted first (see ``omat_core.query_interpret``): natural
+    language questions are rewritten to domain text plus application/property
+    facet boosts. Technical queries pass through unchanged.
+    """
     must: list[dict[str, Any]] = []
     if q:
-        must.append(
-            {
-                "multi_match": {
-                    "query": q,
-                    "fields": [
-                        "title^4",
-                        "composition.label^3",
-                        "search_text^3",
-                        "applications.raw^2",
-                        "property.name^2",
-                        "abstract^1",
-                    ],
-                    "operator": "and",
+        interpretation = interpret_query(q)
+        should: list[dict[str, Any]] = []
+        if interpretation.text:
+            should.append(
+                {
+                    "multi_match": {
+                        "query": interpretation.text,
+                        "fields": TEXT_FIELDS,
+                        # AND would require every token to match one field:
+                        # "TiAlN coating" (label + application) -> 0 results.
+                        # OR across tokens, AND across separate filter fields.
+                        # No minimum_should_match: interpretation already
+                        # removed conversational filler, and "2" made
+                        # single-token queries ("concrete") return nothing.
+                        "operator": "or",
+                    }
                 }
-            }
-        )
+            )
+        for slug in interpretation.application_slugs:
+            should.append({"term": {"applications.slug": {"value": slug, "boost": INTENT_BOOST}}})
+        for slug in interpretation.property_slugs:
+            should.append({"term": {"property.slug": {"value": slug, "boost": INTENT_BOOST}}})
+        if should:
+            must.append({"bool": {"should": should, "minimum_should_match": 1}})
     filter_clauses: list[dict[str, Any]] = []
     field_map = {
         "elements": "elements",
@@ -80,8 +110,12 @@ def build_search_query(
             range_body["lte"] = high
         if range_body:
             filter_clauses.append(
-                {"bool": {"must": [{"term": {"property.slug": property_slug}}],
-                          "filter": [{"range": {"property.value_si": range_body}}]}}
+                {
+                    "bool": {
+                        "must": [{"term": {"property.slug": property_slug}}],
+                        "filter": [{"range": {"property.value_si": range_body}}],
+                    }
+                }
             )
     elif property_slug:
         filter_clauses.append({"term": {"property.slug": property_slug}})

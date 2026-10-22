@@ -60,7 +60,10 @@ class ValencyClient:
         return headers
 
     def _request(
-        self, method: str, params: dict[str, Any] | None, notify: bool = False,
+        self,
+        method: str,
+        params: dict[str, Any] | None,
+        notify: bool = False,
     ) -> dict[str, Any]:
         body: dict[str, Any] = {"jsonrpc": "2.0", "method": method}
         if params is not None:
@@ -93,8 +96,9 @@ class ValencyClient:
             return {}  # 202 Accepted for notifications
         return response.json()
 
-    async def _rpc(self, method: str, params: dict[str, Any] | None = None,
-                   notify: bool = False) -> dict[str, Any]:
+    async def _rpc(
+        self, method: str, params: dict[str, Any] | None = None, notify: bool = False
+    ) -> dict[str, Any]:
         """One JSON-RPC round trip with a single session-retry."""
         async with httpx.AsyncClient(timeout=self._timeout) as client:
             payload = self._request(method, params, notify)
@@ -116,8 +120,9 @@ class ValencyClient:
         await self._rpc("notifications/initialized", {}, notify=True)
         return result.get("result", {})
 
-    async def call_tool(self, name: str, arguments: dict[str, Any] | None = None,
-                        _retry: bool = True) -> dict[str, Any]:
+    async def call_tool(
+        self, name: str, arguments: dict[str, Any] | None = None, _retry: bool = True
+    ) -> dict[str, Any]:
         """Invoke a Valency endpoint by name. Retries once on session expiry."""
         if self._session_id is None:
             await self.initialize()
@@ -158,6 +163,7 @@ class ValencyClient:
 
 # ---- Typed wrappers for the endpoints OMAT-SE uses -------------------------
 
+
 class Valency:
     """High-level facade over ValencyClient. Topic-based only: your corpus is
     Elsevier, Valency's is preprint servers, so paper-identity lookups
@@ -174,9 +180,7 @@ class Valency:
         return _as_papers(self._client.tool_json(result))
 
     async def search_by_title(self, title: str, limit: int = 5) -> list[dict[str, Any]]:
-        result = await self._client.call_tool(
-            "search_by_title", {"title": title, "limit": limit}
-        )
+        result = await self._client.call_tool("search_by_title", {"title": title, "limit": limit})
         return _as_papers(self._client.tool_json(result))
 
     async def keyword_trends(self, keyword: str, category: str | None = None) -> dict[str, Any]:
@@ -187,9 +191,7 @@ class Valency:
         return _as_json_or_raw(self._client.tool_json(result))
 
     async def publication_trends(self, category: str) -> dict[str, Any]:
-        result = await self._client.call_tool(
-            "get_publication_trends", {"category": category}
-        )
+        result = await self._client.call_tool("get_publication_trends", {"category": category})
         return _as_json_or_raw(self._client.tool_json(result))
 
     async def author_profile(self, name: str) -> dict[str, Any]:

@@ -48,9 +48,7 @@ def convex_hull(points: Sequence[Point]) -> list[Point]:
         return list(points)
 
     def cross(origin: Point, a: Point, b: Point) -> float:
-        return (a[0] - origin[0]) * (b[1] - origin[1]) - (
-            a[1] - origin[1]
-        ) * (b[0] - origin[0])
+        return (a[0] - origin[0]) * (b[1] - origin[1]) - (a[1] - origin[1]) * (b[0] - origin[0])
 
     ordered = sorted(set(points))
     lower: list[Point] = []
@@ -121,7 +119,7 @@ def build_gsc(
         materials.setdefault((row.article_pii, row.canonical), {})[row.slug] = row
 
     points_by_family: dict[str, list[Point]] = {}
-    labels: dict[str, dict[str, str]] = {property_a: {}, property_b: {}}
+    labels: dict[str, dict[str, str]] = {}
     for by_slug in materials.values():
         a_row = by_slug.get(property_a)
         b_row = by_slug.get(property_b)
@@ -130,15 +128,16 @@ def build_gsc(
         if a_row.value <= 0 or b_row.value <= 0:
             continue  # notebook: drop rows where either property is 0/NaN
         for row in (a_row, b_row):
+            # First occurrence wins, like the TS port's "if (axis && !axis.name)".
             labels.setdefault(row.slug, {"slug": row.slug, "name": row.name, "unit": row.unit})
         if not a_row.elements:
             continue  # no composition: no family to belong to
         family = family_name(a_row.elements)
         points_by_family.setdefault(family, []).append((a_row.value, b_row.value))
 
-    ranked = sorted(
-        points_by_family.items(), key=lambda item: (-len(item[1]), item[0])
-    )[:max_families]
+    ranked = sorted(points_by_family.items(), key=lambda item: (-len(item[1]), item[0]))[
+        :max_families
+    ]
 
     families: list[dict[str, Any]] = []
     for name, points in ranked:
@@ -146,6 +145,10 @@ def build_gsc(
         if len(unique) < MIN_UNIQUE_POINTS or _is_degenerate(unique):
             continue  # notebook: skip families a hull cannot cover
         hull = convex_hull(unique)
+        if len(hull) < MIN_UNIQUE_POINTS:
+            # Collinear points: the chain collapses them to a 2-vertex "hull"
+            # with no area — there is no blob to draw.
+            continue
         smoothed = [(max(x, 0.0), max(y, 0.0)) for x, y in chaikin_smooth(hull)]
         families.append(
             {

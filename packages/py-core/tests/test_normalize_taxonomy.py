@@ -19,9 +19,10 @@ def taxonomy():
 
 def test_doi_normalization():
     assert normalize_doi("10.1016/j.matlet.2020.129009") == "10.1016/j.matlet.2020.129009"
-    assert normalize_doi(
-        "https://doi.org/10.1016/J.MATLET.2020.129009"
-    ) == "10.1016/j.matlet.2020.129009"
+    assert (
+        normalize_doi("https://doi.org/10.1016/J.MATLET.2020.129009")
+        == "10.1016/j.matlet.2020.129009"
+    )
     assert normalize_doi("S0167577X2031716X") is None
     assert normalize_doi("") is None
 
@@ -52,9 +53,16 @@ def test_dimensionless_unit(taxonomy):
 
 
 def test_all_eight_units_convert(taxonomy):
-    cases = [("GPa", 1.0, 1e9), ("K", 300.0, 300.0), ("g/cm³", 2.5, 2500.0),
-             ("Ω⁻¹·cm⁻¹", 45.7, 4570.0), ("eV", 1.0, 1.602176634e-19),
-             ("K⁻¹", 1e-6, 1e-6), ("MPa⋅m½", 2.0, 2e6), (None, 3.14, 3.14)]
+    cases = [
+        ("GPa", 1.0, 1e9),
+        ("K", 300.0, 300.0),
+        ("g/cm³", 2.5, 2500.0),
+        ("Ω⁻¹·cm⁻¹", 45.7, 4570.0),
+        ("eV", 1.0, 1.602176634e-19),
+        ("K⁻¹", 1e-6, 1e-6),
+        ("MPa⋅m½", 2.0, 2e6),
+        (None, 3.14, 3.14),
+    ]
     for unit, value, expected in cases:
         pv = make_property_value("Hardness" if unit else "Refractive index", value, unit, taxonomy)
         assert pv.value_si == pytest.approx(expected), f"unit {unit}"
@@ -74,6 +82,7 @@ def test_journal_resolution(taxonomy):
 
 def test_application_slug():
     from omat_core.normalize import make_application
+
     app = make_application("Coatings / Barriers")
     assert app.slug == "coatings-barriers"
 

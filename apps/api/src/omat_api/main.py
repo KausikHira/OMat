@@ -55,9 +55,7 @@ def create_app() -> FastAPI:
 
     # OpenSearch down -> 503 with a clear message, never an opaque 500.
     @application.exception_handler(SearchBackendUnavailable)
-    async def _search_unavailable(
-        _: object, exc: SearchBackendUnavailable
-    ) -> JSONResponse:
+    async def _search_unavailable(_: object, exc: SearchBackendUnavailable) -> JSONResponse:
         return JSONResponse(
             status_code=503,
             content={"detail": "search backend unavailable", "reason": str(exc)},

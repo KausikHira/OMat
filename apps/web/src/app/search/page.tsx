@@ -9,7 +9,7 @@ import { SearchForm } from "@/components/search-form";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Wordmark } from "@/components/wordmark";
 import { fetchFacetPanels, fetchGscChart, fetchMeasurements } from "@/lib/api";
-import { pairableProperties } from "@/lib/gsc";
+import { type PairOption, pairableProperties } from "@/lib/gsc";
 import { groupMeasurementsByPaper, paginatePapers } from "@/lib/papers";
 import type { SearchState, SortKey } from "@/lib/search";
 import { buildSearchHref, parseSearchParams } from "@/lib/search";
@@ -32,15 +32,34 @@ function gscSlug(
   return value && GSC_SLUG_PATTERN.test(value) ? value : undefined;
 }
 
-/** GSC pair from the URL; defaults to the notebook's final choice. */
+type GscPair = { a: string; b: string };
+
 function parseGscPair(params: Record<string, string | string[] | undefined>): {
-  a: string;
-  b: string;
+  a?: string;
+  b?: string;
 } {
-  return {
-    a: gscSlug(params, "gscA") ?? "hardness",
-    b: gscSlug(params, "gscB") ?? "density",
-  };
+  return { a: gscSlug(params, "gscA"), b: gscSlug(params, "gscB") };
+}
+
+/**
+ * Plot the properties this search is actually about: when the URL does not
+ * pin a pair, the axes default to the most-measured pairable properties in
+ * the current result set (e.g. a conductivity search plots conductivity, not
+ * the notebook's hardness/density stand-ins).
+ */
+function resolveGscPair(requested: { a?: string; b?: string }, options: PairOption[]): GscPair {
+  const preferred = [options[0]?.slug, options[1]?.slug, "hardness", "density"].filter(
+    (slug): slug is string => Boolean(slug),
+  );
+  const a = requested.a ?? preferred[0] ?? "hardness";
+  const b = requested.b ?? preferred.find((slug) => slug !== a) ?? "density";
+  if (a === b) {
+    const alternative = preferred.find((slug) => slug !== a);
+    if (alternative) {
+      return { a, b: alternative };
+    }
+  }
+  return { a, b };
 }
 
 const resultTabs = [
@@ -104,7 +123,7 @@ function Pagination({ query, page, totalPages, start, end, total }: PaginationPr
 export default async function SearchPage({ searchParams }: SearchPageProps) {
   const rawParams = await searchParams;
   const query: SearchState = parseSearchParams(rawParams);
-  const gscPair = parseGscPair(rawParams);
+  const requestedPair = parseGscPair(rawParams);
 
   // The search endpoint is measurement-level. Group its page of records into
   // papers for display; paper-level pagination can move server-side when the
@@ -113,10 +132,11 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
     fetchMeasurements(query),
     fetchFacetPanels(query),
   ]);
+  const gscOptions = pairableProperties(results);
+  const gscPair = resolveGscPair(requestedPair, gscOptions);
   // The GSC chart is only fetched on the Plots tab, from the aggregate
   // endpoint (never from the raw result set in the browser).
   const gsc = query.tab === "plots" ? await fetchGscChart(query, gscPair) : null;
-  const gscOptions = pairableProperties(results);
   const papers = groupMeasurementsByPaper(results);
   const paperPage = paginatePapers(papers, query.page);
   const facets = facetPanels.facets;

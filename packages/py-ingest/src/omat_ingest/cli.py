@@ -25,16 +25,21 @@ def cmd_validate(args: argparse.Namespace) -> int:
     if rejects:
         out = write_rejects(rejects, Path(args.rejects))
         print(f"rejects written to {out}")
-    print(json.dumps({
-        "total_rows": stats.total_rows,
-        "records": stats.records_built,
-        "golden": stats.golden,
-        "property_only": stats.property_only,
-        "composition_only": stats.composition_only,
-        "duplicates": stats.duplicates,
-        "rejections": stats.rejections,
-        "warnings": stats.warnings,
-    }, indent=2))
+    print(
+        json.dumps(
+            {
+                "total_rows": stats.total_rows,
+                "records": stats.records_built,
+                "golden": stats.golden,
+                "property_only": stats.property_only,
+                "composition_only": stats.composition_only,
+                "duplicates": stats.duplicates,
+                "rejections": stats.rejections,
+                "warnings": stats.warnings,
+            },
+            indent=2,
+        )
+    )
     return 0 if stats.rejections == 0 else 1
 
 
@@ -57,6 +62,7 @@ def cmd_index(args: argparse.Namespace) -> int:
         iter_records(Path(args.path), taxonomy, stats, rejects),
         Path(args.stage) / "records.jsonl",
     )
+
     # Re-read the staged JSONL so indexing and stats never disagree.
     def _docs() -> Iterator[dict]:
         with (Path(args.stage) / "records.jsonl").open() as handle:
@@ -66,13 +72,18 @@ def cmd_index(args: argparse.Namespace) -> int:
     ok, failed = bulk_index(client, _docs())
     client.indices.refresh(index=args.alias)
     total = count_all(client)
-    print(json.dumps({
-        **_stats_dict(stats),
-        "staged": staged,
-        "indexed_ok": ok,
-        "indexed_failed": failed,
-        "alias_count": total,
-    }, indent=2))
+    print(
+        json.dumps(
+            {
+                **_stats_dict(stats),
+                "staged": staged,
+                "indexed_ok": ok,
+                "indexed_failed": failed,
+                "alias_count": total,
+            },
+            indent=2,
+        )
+    )
     if rejects:
         write_rejects(rejects, Path(args.rejects))
     return 0
@@ -126,9 +137,7 @@ def build_parser() -> argparse.ArgumentParser:
     index.add_argument("--dry-run", action="store_true", help="parse and validate only")
     index.add_argument("--stage", default="data/staging", help="JSONL staging directory")
     index.add_argument("--rejects", default="data/rejects", help="rejects directory")
-    index.add_argument(
-        "--opensearch-url", default="http://localhost:9200", help="OpenSearch URL"
-    )
+    index.add_argument("--opensearch-url", default="http://localhost:9200", help="OpenSearch URL")
     index.set_defaults(func=cmd_index)
 
     report = sub.add_parser("report", help="summarize the last validation run")

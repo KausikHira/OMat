@@ -26,13 +26,18 @@ from ..service import SearchBackendUnavailable, fetch_gsc_rows, parse_multi
 router = APIRouter(prefix="/aggregates", tags=["aggregates"])
 
 Kind = Literal[
-    "property_hist", "records_by_year", "top_journals", "element_pairs",
-    "property_by_year", "gsc",
+    "property_hist",
+    "records_by_year",
+    "top_journals",
+    "element_pairs",
+    "property_by_year",
+    "gsc",
 ]
 
 
-def _base_filters(elements: str | None, journal: str | None, app: str | None,
-                  property_slug: str | None) -> dict[str, Any]:
+def _base_filters(
+    elements: str | None, journal: str | None, app: str | None, property_slug: str | None
+) -> dict[str, Any]:
     filters: dict[str, list[str]] = {}
     if elements:
         filters["elements"] = parse_multi(elements)
@@ -62,9 +67,7 @@ async def aggregates(
 ) -> dict[str, Any]:
     if kind == "gsc":
         if not property_a or not property_b:
-            raise HTTPException(
-                422, "gsc requires ?property_a=<slug>&property_b=<slug>"
-            )
+            raise HTTPException(422, "gsc requires ?property_a=<slug>&property_b=<slug>")
         if property_a == property_b:
             raise HTTPException(422, "gsc requires two different properties")
         filters: dict[str, list[str]] = {}
@@ -88,22 +91,29 @@ async def aggregates(
         if not property:
             raise HTTPException(422, "property_hist requires ?property=<slug>")
         body = {
-            "query": query, "size": 0,
-            "aggs": {"hist": {
-                "histogram": {"field": "property.value_si", "min_doc_count": 0},
-            }},
+            "query": query,
+            "size": 0,
+            "aggs": {
+                "hist": {
+                    "histogram": {"field": "property.value_si", "min_doc_count": 0},
+                }
+            },
         }
         try:
             response = await client.search(index=ALIAS, body=body)
         except Exception as exc:
             raise SearchBackendUnavailable(f"opensearch unreachable: {exc}") from exc
         buckets = response["aggregations"]["hist"]["buckets"]
-        return {"kind": kind, "property": property,
-                "buckets": [{"x": b["key"], "count": b["doc_count"]} for b in buckets]}
+        return {
+            "kind": kind,
+            "property": property,
+            "buckets": [{"x": b["key"], "count": b["doc_count"]} for b in buckets],
+        }
 
     if kind == "records_by_year":
         body = {
-            "query": query, "size": 0,
+            "query": query,
+            "size": 0,
             "aggs": {"years": {"histogram": {"field": "year", "interval": 1, "min_doc_count": 0}}},
         }
         try:
@@ -111,13 +121,19 @@ async def aggregates(
         except Exception as exc:
             raise SearchBackendUnavailable(f"opensearch unreachable: {exc}") from exc
         buckets = response["aggregations"]["years"]["buckets"]
-        return {"kind": kind,
-                "buckets": [{"x": int(b["key"]), "count": b["doc_count"]} for b in buckets
-                            if 1950 <= b["key"] <= 2027]}
+        return {
+            "kind": kind,
+            "buckets": [
+                {"x": int(b["key"]), "count": b["doc_count"]}
+                for b in buckets
+                if 1950 <= b["key"] <= 2027
+            ],
+        }
 
     if kind == "top_journals":
         body = {
-            "query": query, "size": 0,
+            "query": query,
+            "size": 0,
             "aggs": {"journals": {"terms": {"field": "journal.slug", "size": size}}},
         }
         try:
@@ -125,12 +141,15 @@ async def aggregates(
         except Exception as exc:
             raise SearchBackendUnavailable(f"opensearch unreachable: {exc}") from exc
         buckets = response["aggregations"]["journals"]["buckets"]
-        return {"kind": kind,
-                "buckets": [{"label": b["key"], "count": b["doc_count"]} for b in buckets]}
+        return {
+            "kind": kind,
+            "buckets": [{"label": b["key"], "count": b["doc_count"]} for b in buckets],
+        }
 
     if kind == "element_pairs":
         body = {
-            "query": query, "size": 0,
+            "query": query,
+            "size": 0,
             "aggs": {"pairs": {"terms": {"field": "elements", "size": size}}},
         }
         try:
@@ -138,28 +157,37 @@ async def aggregates(
         except Exception as exc:
             raise SearchBackendUnavailable(f"opensearch unreachable: {exc}") from exc
         buckets = response["aggregations"]["pairs"]["buckets"]
-        return {"kind": kind,
-                "buckets": [{"label": b["key"], "count": b["doc_count"]} for b in buckets]}
+        return {
+            "kind": kind,
+            "buckets": [{"label": b["key"], "count": b["doc_count"]} for b in buckets],
+        }
 
     if kind == "property_by_year":
         if not property:
             raise HTTPException(422, "property_by_year requires ?property=<slug>")
         body = {
-            "query": query, "size": 0,
-            "aggs": {"by_year": {
-                "histogram": {"field": "year", "interval": 1, "min_doc_count": 0},
-                "aggs": {"avg_si": {"avg": {"field": "property.value_si"}}},
-            }},
+            "query": query,
+            "size": 0,
+            "aggs": {
+                "by_year": {
+                    "histogram": {"field": "year", "interval": 1, "min_doc_count": 0},
+                    "aggs": {"avg_si": {"avg": {"field": "property.value_si"}}},
+                }
+            },
         }
         try:
             response = await client.search(index=ALIAS, body=body)
         except Exception as exc:
             raise SearchBackendUnavailable(f"opensearch unreachable: {exc}") from exc
         buckets = response["aggregations"]["by_year"]["buckets"]
-        return {"kind": kind, "property": property,
-                "buckets": [{"x": int(b["key"]),
-                             "avg": b["avg_si"].get("value"),
-                             "count": b["doc_count"]} for b in buckets
-                            if 1950 <= b["key"] <= 2027]}
+        return {
+            "kind": kind,
+            "property": property,
+            "buckets": [
+                {"x": int(b["key"]), "avg": b["avg_si"].get("value"), "count": b["doc_count"]}
+                for b in buckets
+                if 1950 <= b["key"] <= 2027
+            ],
+        }
 
     raise HTTPException(400, f"unknown kind {kind}")  # pragma: no cover

@@ -92,9 +92,7 @@ def find_taxonomy_dir(start: Path | None = None) -> Path:
         target = candidate / "data" / "taxonomy"
         if target.is_dir():
             return target
-    raise FileNotFoundError(
-        "data/taxonomy not found; set OMAT_TAXONOMY_DIR or run from the repo"
-    )
+    raise FileNotFoundError("data/taxonomy not found; set OMAT_TAXONOMY_DIR or run from the repo")
 
 
 @lru_cache(maxsize=4)
@@ -115,7 +113,9 @@ def _load(dir_path: str) -> Taxonomy:
     units = yaml.safe_load((root / "units.yaml").read_text())["units"]
     for raw, spec in units.items():
         taxonomy.units[raw] = UnitDef(
-            raw=raw, si_unit=spec["si_unit"], factor=float(spec["factor"]),
+            raw=raw,
+            si_unit=spec["si_unit"],
+            factor=float(spec["factor"]),
         )
 
     journals = yaml.safe_load((root / "journals.yaml").read_text())["journals"]

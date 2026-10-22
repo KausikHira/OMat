@@ -48,6 +48,19 @@ describe("groupMeasurementsByPaper", () => {
       "hardness",
     ]);
   });
+
+  test("papers without an enriched title read as paywalled source", () => {
+    const record: Measurement = {
+      ...(MEASUREMENTS[0] as Measurement),
+      title: undefined,
+      abstract: undefined,
+      composition: "Al95.89-Cr1.37-N1.37-Ti1.37",
+    };
+
+    const papers = groupMeasurementsByPaper([record]);
+
+    expect(papers[0]?.title).toBe("Paywalled source");
+  });
 });
 
 describe("paginatePapers", () => {

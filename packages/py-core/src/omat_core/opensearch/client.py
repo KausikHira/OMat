@@ -53,12 +53,12 @@ def _point_alias(client: OpenSearch, concrete: str) -> None:
 
 
 def bulk_index(
-    client: OpenSearch, docs: Iterable[dict[str, Any]], chunk: int = 800,
+    client: OpenSearch,
+    docs: Iterable[dict[str, Any]],
+    chunk: int = 800,
 ) -> tuple[int, int]:
     """Index docs against the alias. Returns (ok, failed)."""
-    actions = (
-        {"_index": ALIAS, "_id": doc["record_id"], "_source": doc} for doc in docs
-    )
+    actions = ({"_index": ALIAS, "_id": doc["record_id"], "_source": doc} for doc in docs)
     ok, failed = bulk(client, actions, chunk_size=chunk, raise_on_error=False, refresh=False)
     return ok, len(failed) if isinstance(failed, list) else failed
 

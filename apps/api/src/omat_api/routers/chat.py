@@ -27,7 +27,7 @@ from ..llm import GeminiProvider, LlmUnavailable
 from ..service import get_paper
 from ..settings import get_settings
 
-router = APIRouter(prefix="/papers", tags=["chat"])
+router = APIRouter(tags=["chat"])
 
 MAX_TABLE_CHARS = 24000  # ~6k tokens of compact table
 
@@ -38,24 +38,25 @@ class ChatRequest(BaseModel):
 
 def _records_table(paper: dict[str, Any]) -> str:
     header = (
-        "record_id | doi | composition_canonical | property | value | unit"
-        " | elements | application"
+        "record_id | doi | composition_canonical | property | value | unit | elements | application"
     )
     lines = [header]
     for record in paper["records"]:
         prop = record.get("property") or {}
         composition = record.get("composition") or {}
         lines.append(
-            " | ".join([
-                record.get("record_id", ""),
-                record.get("doi", ""),
-                composition.get("canonical", ""),
-                prop.get("name", ""),
-                str(prop.get("value", "")),
-                prop.get("unit", "") or "",
-                ",".join(record.get("elements", [])),
-                ",".join(a.get("raw", "") for a in record.get("applications", [])),
-            ])
+            " | ".join(
+                [
+                    record.get("record_id", ""),
+                    record.get("doi", ""),
+                    composition.get("canonical", ""),
+                    prop.get("name", ""),
+                    str(prop.get("value", "")),
+                    prop.get("unit", "") or "",
+                    ",".join(record.get("elements", [])),
+                    ",".join(a.get("raw", "") for a in record.get("applications", [])),
+                ]
+            )
         )
     table = "\n".join(lines)
     return table[:MAX_TABLE_CHARS]
@@ -74,19 +75,21 @@ the measurement table provided. Rules:
 
 def _valency_tool() -> dict[str, Any]:
     return {
-        "functionDeclarations": [{
-            "name": "search_external_literature",
-            "description": (
-                "Search external preprint literature (arXiv etc.) for papers about a "
-                "materials topic. Use for 'compare with literature' questions, not "
-                "for facts about this paper's measurements."
-            ),
-            "parameters": {
-                "type": "OBJECT",
-                "properties": {"query": {"type": "STRING"}},
-                "required": ["query"],
-            },
-        }]
+        "functionDeclarations": [
+            {
+                "name": "search_external_literature",
+                "description": (
+                    "Search external preprint literature (arXiv etc.) for papers about a "
+                    "materials topic. Use for 'compare with literature' questions, not "
+                    "for facts about this paper's measurements."
+                ),
+                "parameters": {
+                    "type": "OBJECT",
+                    "properties": {"query": {"type": "STRING"}},
+                    "required": ["query"],
+                },
+            }
+        ]
     }
 
 
@@ -94,7 +97,7 @@ async def _sse(message: str) -> str:
     return f"data: {json.dumps({'delta': message})}\n\n"
 
 
-@router.post("/{id_or_doi}/chat")
+@router.post("/papers/{id_or_doi:path}/chat")
 async def paper_chat(
     id_or_doi: str,
     request: ChatRequest,
@@ -134,7 +137,8 @@ async def paper_chat(
         yield _sse({"paper": paper["doi"], "records": paper["record_count"]})
         try:
             reply = await provider.complete(
-                SYSTEM_PROMPT, user_prompt,
+                SYSTEM_PROMPT,
+                user_prompt,
                 tool_declarations=[_valency_tool()] if valency else None,
             )
             if reply.tool_call and valency:
@@ -148,8 +152,10 @@ async def paper_chat(
                 if not await cache_get(redis, cache_key):
                     await cache_set(redis, cache_key, json.dumps(literature), 900)
                 reply = await provider.complete(
-                    SYSTEM_PROMPT, user_prompt,
-                    tool_result=literature, tool_name=reply.tool_call.get("name"),
+                    SYSTEM_PROMPT,
+                    user_prompt,
+                    tool_result=literature,
+                    tool_name=reply.tool_call.get("name"),
                     tool_declarations=None,
                 )
             for chunk in _chunks(reply.text):
@@ -163,4 +169,4 @@ async def paper_chat(
 
 def _chunks(text: str, size: int = 80):
     for start in range(0, len(text), size):
-        yield text[start:start + size]
+        yield text[start : start + size]

@@ -77,13 +77,19 @@ def build_search_text(
     property_name: str | None,
     journal_name: str | None,
     applications: list[str],
+    species: list[str] | None = None,
 ) -> str:
-    """One analyzable flat field: label + element symbols + property + journal +
-    application words. Powers exact-formula, element-subset, and typo-tolerant
-    search from a single standard-analyzer field."""
+    """One analyzable flat field: species (as-written, e.g. TiAlN / B2O3) +
+    label + element symbols + property + journal + application words.
+
+    The raw species string is what users type ("TiAlN"); without it the
+    standard analyzer only sees at%-numbers ("Al33.33-N33.33-Ti33.33") and a
+    "TiAlN" query tokenizes to Ti/Al/N with no exact match.
+    """
     parts: list[str] = []
-    if label:
-        parts.append(label)
+    for entry in (label, *(species or [])):
+        if entry:
+            parts.append(entry)
     parts.extend(elements)
     if property_name:
         parts.append(property_name)

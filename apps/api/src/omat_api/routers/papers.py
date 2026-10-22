@@ -17,7 +17,7 @@ from ..service import get_paper
 router = APIRouter(prefix="/papers", tags=["papers"])
 
 
-@router.get("/{id_or_doi}")
+@router.get("/{id_or_doi:path}")
 async def paper_detail(
     id_or_doi: str,
     client: AsyncOpenSearch = Depends(get_opensearch),

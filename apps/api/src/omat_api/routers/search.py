@@ -45,14 +45,24 @@ async def search(
     redis: Redis = Depends(get_redis),
 ) -> dict[str, Any]:
     filters_for_key = {
-        "q": q, "elements": elements, "property": property, "min": min,
-        "max": max, "journal": journal, "app": app, "year_from": year_from,
-        "year_to": year_to, "sort": sort,
+        "q": q,
+        "elements": elements,
+        "property": property,
+        "min": min,
+        "max": max,
+        "journal": journal,
+        "app": app,
+        "year_from": year_from,
+        "year_to": year_to,
+        "sort": sort,
     }
     cacheable = cursor is None  # cache first-page only
-    cache_key = "search:" + hashlib.sha1(
-        json.dumps(filters_for_key, sort_keys=True, default=str).encode()
-    ).hexdigest()
+    cache_key = (
+        "search:"
+        + hashlib.sha1(
+            json.dumps(filters_for_key, sort_keys=True, default=str).encode()
+        ).hexdigest()
+    )
 
     if cacheable:
         cached = await cache_get(redis, cache_key)

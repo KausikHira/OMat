@@ -54,8 +54,14 @@ class IngestStats:
         self.warnings[warning] = self.warnings.get(warning, 0) + 1
 
 
-def _reject(stats: IngestStats, rejects: list[Rejection], row_index: int,
-            reason: str, detail: str, row: list[str]) -> None:
+def _reject(
+    stats: IngestStats,
+    rejects: list[Rejection],
+    row_index: int,
+    reason: str,
+    detail: str,
+    row: list[str],
+) -> None:
     stats.rejections += 1
     rejects.append(
         Rejection(
@@ -68,7 +74,10 @@ def _reject(stats: IngestStats, rejects: list[Rejection], row_index: int,
 
 
 def row_to_record(
-    row: list[str], row_index: int, taxonomy: Taxonomy, stats: IngestStats,
+    row: list[str],
+    row_index: int,
+    taxonomy: Taxonomy,
+    stats: IngestStats,
     rejects: list[Rejection],
 ) -> Record | None:
     """One CSV row -> one Record, or None if rejected."""
@@ -113,8 +122,7 @@ def row_to_record(
             and not isinstance(value, bool)
         )
         if not types_ok:
-            _reject(stats, rejects, row_index,
-                    "bad_property_types", repr(prop_raw)[:120], row)
+            _reject(stats, rejects, row_index, "bad_property_types", repr(prop_raw)[:120], row)
             return None
         property_value = make_property_value(name, float(value), unit, taxonomy)
     elif isinstance(prop_raw, (list, tuple)) and not prop_raw:
@@ -128,9 +136,7 @@ def row_to_record(
     except CompositionError as exc:
         _reject(stats, rejects, row_index, "bad_apl_group", str(exc), row)
         return None
-    applications = [
-        make_application(str(a)) for a in (apps_raw or []) if str(a).strip()
-    ]
+    applications = [make_application(str(a)) for a in (apps_raw or []) if str(a).strip()]
 
     journal = taxonomy.journal_for_doi(doi)
     year = year_from_doi(doi)
@@ -167,6 +173,7 @@ def row_to_record(
             property_name=property_value.name if property_value else None,
             journal_name=journal.name if journal else None,
             applications=[a.raw for a in applications],
+            species=sorted({s.symbol for s in composition.species}) if composition else [],
         ),
     )
     return record
@@ -218,7 +225,8 @@ def write_rejects(rejects: list[Rejection], out_dir: Path) -> Path:
 
 
 def run_validate(
-    csv_path: Path, taxonomy: Taxonomy,
+    csv_path: Path,
+    taxonomy: Taxonomy,
 ) -> tuple[IngestStats, list[Rejection], list[Record]]:
     stats = IngestStats()
     rejects: list[Rejection] = []

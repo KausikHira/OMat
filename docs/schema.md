@@ -88,6 +88,22 @@ amounts, element vector, and `search_text`.
 them empty; a later enrichment pass may populate them. The web app falls back to
 measurement-derived labels when they are absent.
 
+## Query interpretation
+
+Free-text queries are rewritten in `py-core` before they hit the index:
+
+1. Conversational filler (`I want to`, `should I use`, …) is dropped from the
+   text match. Original token casing is preserved so `TiAlN` still tokenizes.
+2. Domain words are mapped to taxonomy facets through the curated lexicon
+   `data/taxonomy/intents.yaml` ("house", "riverbed", "concrete" →
+   `applications.slug: structural-mechanical`; "stiff" →
+   `property.slug: youngs_modulus`). Facet hits become boosted `should`
+   clauses, never hard filters.
+3. Lexicon synonyms expand the text ("concrete" → "cement mortar").
+
+This is keyword-only; no embeddings are involved. Technical queries pass
+through untouched. Full search semantics: [search.md](search.md).
+
 ## Validation rules
 
 - `proxy_id` must be unique per property; duplicates keep the latest `Date` and

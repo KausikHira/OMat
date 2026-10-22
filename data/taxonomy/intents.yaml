@@ -1,0 +1,72 @@
+# Natural-language intent lexicon.
+#
+# Maps how people ASK about materials to the taxonomy the index stores
+# (applications.yaml, properties.yaml). Like the other taxonomy files this is
+# curated data: code reads this file and never guesses a mapping.
+#
+# Sections:
+# - filler_words: conversational tokens dropped from the BM25 text match
+#   ("I want to make a ..." -> just the domain words)
+# - applications: user words -> applications.slug (raw names in applications.yaml)
+# - properties:   user words -> property slug (names in properties.yaml)
+# - synonyms:     user word -> extra text terms appended to the query
+#
+# Query interpretation is keyword-only: no embeddings, no model call
+# (see docs/adr/0001-stack-and-data-model.md).
+
+filler_words:
+  [i, im, ive, me, my, we, you, a, an, the, to, of, for, in, on, at, near,
+   with, and, or, is, are, be, was, were, do, does, did, what, which, who,
+   how, why, when, where, should, could, would, can, may, might, will,
+   want, wants, wanted, need, needs, needed, looking, look, looks, show,
+   give, recommend, suggest, best, good, better, make, makes, making,
+   use, using, used, type, kind, material, materials, please, help, hi,
+   hello, there, here, this, that, these, those, it, its, about, some, any]
+
+applications:
+  # "I want to build a house near a riverbed" -> structural concrete records
+  structural-mechanical:
+    [house, houses, building, buildings, bridge, bridges, foundation,
+     riverbed, dam, tunnel, load bearing, structural, construction,
+     concrete, cement, mortar, rebar, beam, column]
+  coatings-barriers:
+    [coating, coatings, paint, protective, barrier, wear resistance,
+     anticorrosion, corrosion protection]
+  energy:
+    [battery, batteries, solar, photovoltaic, energy storage, supercapacitor,
+     thermoelectric]
+  fuel-cells:
+    [fuel cell, electrolyte, membrane, sofc]
+  biomedical-dental:
+    [implant, implants, dental, tooth, teeth, bone, biocompatible, prosthetic]
+  catalysis:
+    [catalyst, catalysis, catalytic]
+  optical-photonics:
+    [lens, lenses, optical, photonics, laser, display]
+  sensors-actuators:
+    [sensor, sensors, actuator, actuators, detector]
+  nuclear-radiation:
+    [nuclear, radiation, reactor]
+  microelectronic-components:
+    [semiconductor, chip, transistor, interconnect, dielectric]
+
+properties:
+  youngs_modulus:
+    [stiff, stiffness, rigid, rigidity, elastic modulus, flexible]
+  hardness:
+    [hard, harder, hardest, scratch resistance]
+  density:
+    [dense, lightweight, light weight, heavy]
+  electric_conductivity:
+    [conductive, conductivity, insulating, insulator, resistivity]
+  thermal_expansion_coefficient:
+    [thermal expansion, cte]
+  glass_transition_temperature:
+    [glass transition]
+  fracture_toughness:
+    [tough, toughness, crack, cracks, brittle]
+  refractive_index:
+    [refractive]
+
+synonyms:
+  concrete: [cement, mortar]

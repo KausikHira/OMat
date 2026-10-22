@@ -28,10 +28,23 @@ from omat_core.valency import Valency, ValencyClient, ValencyUnavailable
 mcp = FastMCP("omat-se")
 
 SEARCH_FIELDS = [
-    "record_id", "article_pii", "doi", "paper_link", "has_composition",
-    "has_property", "composition.canonical", "composition.elements",
-    "property.name", "property.slug", "property.value", "property.unit",
-    "property.value_si", "elements", "species", "journal.name", "year",
+    "record_id",
+    "article_pii",
+    "doi",
+    "paper_link",
+    "has_composition",
+    "has_property",
+    "composition.canonical",
+    "composition.elements",
+    "property.name",
+    "property.slug",
+    "property.value",
+    "property.unit",
+    "property.value_si",
+    "elements",
+    "species",
+    "journal.name",
+    "year",
     "applications.raw",
 ]
 
@@ -67,7 +80,10 @@ def search_records(
     """Search measurement records by composition, property, journal, or application.
 
     Args:
-        query: free-text (composition label, property name, journal words).
+        query: free-text (composition label, property name, journal words) or a
+            full natural-language question, e.g. "I want to build a house near
+            a riverbed, what concrete should I use". py-core maps the domain
+            words to application/property facets before searching.
         elements: element symbols all of which must be present (e.g. ["Ti", "O"]).
         property_slug: property filter, e.g. youngs_modulus, hardness, density.
         min_value/max_value: numeric range on property value (use with property_slug).
@@ -93,10 +109,15 @@ def get_paper(doi_or_pii: str) -> dict[str, Any]:
     """Return every measurement row for one paper, keyed by DOI or article PII."""
     is_doi = doi_or_pii.lower().startswith("10.")
     body = {
-        "query": {"bool": {"should": [
-            {"term": {"doi": doi_or_pii.lower() if is_doi else doi_or_pii}},
-            {"term": {"article_pii": doi_or_pii.upper()}},
-        ], "minimum_should_match": 1}},
+        "query": {
+            "bool": {
+                "should": [
+                    {"term": {"doi": doi_or_pii.lower() if is_doi else doi_or_pii}},
+                    {"term": {"article_pii": doi_or_pii.upper()}},
+                ],
+                "minimum_should_match": 1,
+            }
+        },
         "size": 1000,
         "_source": SEARCH_FIELDS,
     }

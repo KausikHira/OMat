@@ -71,12 +71,13 @@ export function groupMeasurementsByPaper(measurements: Measurement[]): PaperGrou
         applicationMap.set(application.slug, application);
       }
     }
-    const compositions = Array.from(new Set(records.map((record) => record.composition)));
     const title =
       records.find((record) => record.title)?.title ??
-      (compositions.length > 0
-        ? `Measurements for ${compositions.join(", ")}`
-        : "Untitled measurement record");
+      // Papers without an enriched title/abstract come from paywalled
+      // sources we have no metadata licence for; say that instead of faking
+      // a title from composition labels. The chips below each row already
+      // show every composition.
+      "Paywalled source";
     const abstract = records.find((record) => record.abstract)?.abstract ?? "";
     const year = records.reduce((latest, record) => Math.max(latest, record.year), 0);
 

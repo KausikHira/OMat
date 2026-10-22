@@ -278,6 +278,37 @@ export function toggleApplication(applications: string[], slug: string): string[
     : [...applications, slug];
 }
 
+const SUPERSCRIPT: Record<string, string> = {
+  "-": "⁻",
+  "0": "⁰",
+  "1": "¹",
+  "2": "²",
+  "3": "³",
+  "4": "⁴",
+  "5": "⁵",
+  "6": "⁶",
+  "7": "⁷",
+  "8": "⁸",
+  "9": "⁹",
+};
+
+/**
+ * Property values span ~9 orders of magnitude (aerogel densities around
+ * 1e-9 g/cm³ up to elastic moduli around 1e11 Pa). A plain 2-decimal
+ * formatter rounds those to "0" or unreadable digit soup, so extremes get
+ * scientific notation: 1.04e-9 -> "1.04×10⁻⁹".
+ */
 export function formatValue(value: number): string {
+  if (!Number.isFinite(value)) return "—";
+  const magnitude = Math.abs(value);
+  if (magnitude !== 0 && (magnitude < 1e-3 || magnitude >= 1e6)) {
+    const [mantissa, rawExponent] = value.toExponential(2).split("e");
+    const exponent = (rawExponent ?? "0").replace("+", "");
+    const superscript = exponent
+      .split("")
+      .map((character) => SUPERSCRIPT[character] ?? character)
+      .join("");
+    return `${mantissa}×10${superscript}`;
+  }
   return valueFormatter.format(value);
 }

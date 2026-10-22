@@ -175,6 +175,21 @@ dependencies there.
 - There is no frontend test runner configured yet. Do not add a heavy framework
   without discussing it; `bun test` is available if a pure function needs a test.
 
+### No DOM screenshots
+
+Never use Playwright, Puppeteer, Selenium, headless Chrome, or any other tool
+to render pages or capture DOM screenshots in this repository — not for
+verification, not for debugging, not for report figures. This applies even if
+a dependency happens to be installed.
+
+If a visual check is genuinely required:
+
+1. Ask the user to provide the screenshot and wait for it.
+2. If the user cannot provide one, fall back to the minimal alternative:
+   assert on rendered HTML/markup strings, component logic, or API responses
+   with unit tests, and state explicitly in the response that visual
+   verification was skipped and why.
+
 ## Quality gates before committing
 
 ```bash

@@ -1,0 +1,18 @@
+# Never upload local secrets to Vercel.
+.env
+.env.local
+.env.*.local
+
+# Local caches and tooling.
+.venv/
+.turbo/
+.pytest_cache/
+.ruff_cache/
+__pycache__/
+node_modules/
+
+# Source data and generated artifacts.
+data/
+report/build/
+_site/
+docs/api/openapi.json

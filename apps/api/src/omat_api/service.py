@@ -174,25 +174,24 @@ async def facet_counts(
     return facets
 
 
-async def fetch_gsc_rows(
+async def fetch_property_rows(
     client: AsyncOpenSearch,
     *,
     filters: dict[str, list[str]],
-    property_a: str,
-    property_b: str,
+    property_slugs: list[str],
     max_docs: int = 4000,
 ) -> list[GscRow]:
-    """Bounded search_after scan of the docs measuring either property.
+    """Bounded search_after scan of the docs measuring any of the slugs.
 
-    GSC pairs measurements of the same material across property documents,
-    which no single OpenSearch aggregation can do; the API scans a capped
-    window (sorted by record_id, never from/size) and hands the rows to
-    ``omat_core.gsc.build_gsc`` for the actual chart math.
+    The scatter/correlation charts join measurements of the same material
+    across property documents, which no single OpenSearch aggregation can do;
+    the API scans a capped window (sorted by record_id, never from/size) and
+    hands the rows to py-core for the actual chart math.
     """
     query = build_search_query(None, filters)
     query["bool"]["filter"].extend(
         [
-            {"terms": {"property.slug": [property_a, property_b]}},
+            {"terms": {"property.slug": property_slugs}},
             {"term": {"has_property": True}},
             {"term": {"has_composition": True}},
         ]
@@ -241,6 +240,23 @@ async def fetch_gsc_rows(
             break
         search_after = hits[-1]["sort"]
     return rows
+
+
+async def fetch_gsc_rows(
+    client: AsyncOpenSearch,
+    *,
+    filters: dict[str, list[str]],
+    property_a: str,
+    property_b: str,
+    max_docs: int = 4000,
+) -> list[GscRow]:
+    """Two-property variant of ``fetch_property_rows`` for the GSC chart."""
+    return await fetch_property_rows(
+        client,
+        filters=filters,
+        property_slugs=[property_a, property_b],
+        max_docs=max_docs,
+    )
 
 
 async def get_paper(

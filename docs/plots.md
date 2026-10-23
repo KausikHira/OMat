@@ -4,29 +4,34 @@ The Plots tab (`/search?tab=plots`) renders aggregate views of the current
 result set. Charts are always fed by the aggregate endpoint, never by the raw
 result set in the browser.
 
-## GSC chart (property vs property)
+## Property map with material criteria (three-property scatter)
 
-The headline plot is a port of the analysis notebook (`final_gsc_3.ipynb`):
-every material that was measured for **both** chosen properties becomes one
-`(x, y)` point, and points are grouped into composition *families* by element
-set. Each family is drawn as a smoothed, filled convex-hull blob — the visual
-signature of the notebook chart.
+The headline plot is a port of `plot_3_props_ultimate_with_filtering.ipynb`:
 
-- **Backend math** lives in py-core (`packages/py-core/src/omat_core/gsc.py`):
-  materials are joined by `(article_pii, composition)` across property
-  documents, zero/negative values are dropped, families are ranked by material
-  count (top 12), and hulls with fewer than 3 vertices (collinear points) are
-  skipped because they have no area to fill. Hulls are smoothed with two
-  rounds of closed Chaikin corner cutting instead of scipy splines, keeping
-  py-core dependency-light.
-- **Data source**: `GET /v1/aggregates?kind=gsc&property_a=…&property_b=…`.
-  The endpoint runs a bounded `search_after` scan (max 4,000 docs) over
-  documents measuring either property, then hands the rows to py-core.
-- **Axis choice is search-relevant**: when the URL does not pin `gscA`/`gscB`,
-  the axes default to the most-measured pairable properties in the current
-  result set (a conductivity search plots conductivity, not the notebook's
-  hardness/density stand-ins). The pair selectors are a plain GET form, so any
-  plot is a shareable URL.
+- Materials measured for **all three** chosen properties become one `(x, y)`
+  point, **colored by the third property** (matplotlib `spring` colormap,
+  black edges). A paper's material identity is `(article_pii, composition)`.
+- **Ultimate filtering**: a material whose value on any of the three axes
+  falls outside that axis's 1st/99th percentile (pandas `quantile`
+  semantics) is dropped from the plot entirely.
+- **Criteria highlighting**: materials satisfying all three `>= threshold`
+  conditions are **ringed in blue** and the criteria are shown in bold above
+  the chart (the notebook's bold-lettered required properties).
+- Defaults reproduce the notebook's active criteria set ("criteria 8"):
+  glass transition temperature / activation energy / crystallization
+  temperature with thresholds 600 K / 2 eV / 800 K, whenever those properties
+  exist in the result set; otherwise the most-measured properties of the
+  current search are used. Any combination is a shareable URL
+  (`propX`/`propY`/`propZ`, `thX`/`thY`/`thZ`).
+
+### Data source
+
+`GET /v1/aggregates?kind=props_scatter&property_a=…&property_b=…&property_c=…`
+(+ optional `threshold_a/b/c`). The endpoint runs a bounded `search_after`
+scan (max 4,000 docs) over documents measuring any of the three properties
+and hands the rows to py-core (`packages/py-core/src/omat_core/props_plot.py`)
+for the merge/filter/flag math. On the wire each point is a bare
+`[x, y, z, highlighted]` tuple; the web adapter converts tuples to objects.
 
 ## Other aggregate kinds
 
@@ -39,6 +44,7 @@ signature of the notebook chart.
 | `top_journals` | Horizontal bars by journal |
 | `element_pairs` | Element co-occurrence |
 | `property_by_year` | Average property value per year |
+| `gsc` | Two-property family hulls (the earlier `final_gsc_3.ipynb` chart; still served by the API) |
 
 The Plots tab additionally renders papers-by-year, papers-by-journal, and
 measurements-by-property summaries derived server-side from the current page
@@ -46,24 +52,12 @@ of results.
 
 ## Client rendering rules
 
-- Plotly is browser-only. The chart lives in a client component
-  (`apps/web/src/components/gsc-chart-plot.tsx`) that is loaded exclusively via
-  `dynamic(() => import(...), { ssr: false })` — the server renders a loading
-  placeholder and the browser swaps the chart in after hydration.
-- The bundle is `plotly.js-cartesian-dist-min` (scatter/line/bar only,
-  ~1.4 MB chunk) wired through `react-plotly.js/factory`, not the full
-  `plotly.js` build (~3.5 MB) that the `react-plotly.js` peer dependency
-  would pull in.
-- Plotly's TypeScript types are version-split in the store
-  (`@types/plotly.js` v2 and v3); the components use local structural types
-  plus one ambient declaration for the untyped cartesian dist, so no version
-  of `@types/plotly.js` is trusted.
-
-## Verified behaviour
-
-- `kind=gsc&property_a=hardness&property_b=density` over the current index:
-  ~170 paired materials across 12 families, each hull smoothed to 16–24
-  vertices.
-- Degenerate families (fewer than 3 unique points, aligned on an axis, or
-  collinear) are skipped — matching scipy's `ConvexHull`, which raises on
-  collinear input.
+- All charts are **inline SVG rendered on the server** — no chart library, no
+  client component, no dynamic chunk. Tooltips are native `<title>` elements;
+  chart math (domains, nice ticks, scaling, colormaps) lives in pure, tested
+  functions (`apps/web/src/lib/gsc-chart.ts`, `apps/web/src/lib/props-scatter.ts`).
+- Plotly was dropped deliberately (stale React-16 wrapper crashing under
+  React 19, then a ~1.4 MB client chunk that failed to load in some
+  browsers); react-plotly.js was dropped before that. Any future chart should
+  follow the same rule: prefer SVG/CSS server-rendered from aggregate data;
+  add a chart library only when a plot genuinely cannot be expressed that way.

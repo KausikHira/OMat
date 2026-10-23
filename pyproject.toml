@@ -5,6 +5,8 @@
 line-length = 100
 target-version = "py311"
 src = ["apps", "packages"]
+# Exploratory analysis notebooks are not product code; they must not gate CI.
+extend-exclude = ["apps/web/analysis"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]

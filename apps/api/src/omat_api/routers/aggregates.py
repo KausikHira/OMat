@@ -1,4 +1,4 @@
-"""Aggregates for Plotly dashboards. Charts never scan raw results.
+"""Aggregates for charts. Charts never scan raw results.
 
 kinds:
 - property_hist  : value distribution of one property under current filters
@@ -7,7 +7,10 @@ kinds:
 - element_pairs  : co-occurrence counts (for the heatmap)
 - property_by_year: avg property value per year (scatter/trend)
 - gsc            : property-vs-property points grouped by composition family
-                   with smoothed convex hulls (the notebook chart)
+                   with smoothed convex hulls (the GSC notebook chart)
+- props_scatter  : three-property scatter (x, y, color-by-z) with 1st/99th
+                   percentile filtering and threshold highlighting (the
+                   plot_3_props_ultimate_with_filtering notebook chart)
 """
 
 from __future__ import annotations
@@ -19,9 +22,15 @@ from opensearchpy import AsyncOpenSearch
 
 from omat_core.gsc import build_gsc
 from omat_core.opensearch import ALIAS, build_search_query
+from omat_core.props_plot import build_props_scatter
 
 from ..deps import get_opensearch
-from ..service import SearchBackendUnavailable, fetch_gsc_rows, parse_multi
+from ..service import (
+    SearchBackendUnavailable,
+    fetch_gsc_rows,
+    fetch_property_rows,
+    parse_multi,
+)
 
 router = APIRouter(prefix="/aggregates", tags=["aggregates"])
 
@@ -32,6 +41,7 @@ Kind = Literal[
     "element_pairs",
     "property_by_year",
     "gsc",
+    "props_scatter",
 ]
 
 
@@ -59,12 +69,45 @@ async def aggregates(
     property: str | None = None,  # noqa: A002
     property_a: str | None = None,
     property_b: str | None = None,
+    property_c: str | None = None,
+    threshold_a: float | None = None,
+    threshold_b: float | None = None,
+    threshold_c: float | None = None,
     elements: str | None = None,
     journal: str | None = None,
     app: str | None = None,
     size: int = Query(default=30, ge=1, le=100),
     client: AsyncOpenSearch = Depends(get_opensearch),
 ) -> dict[str, Any]:
+    if kind == "props_scatter":
+        slugs = (property_a, property_b, property_c)
+        if not all(slugs):
+            raise HTTPException(
+                422,
+                "props_scatter requires ?property_a=&property_b=&property_c=<slug>",
+            )
+        if len(set(slugs)) != 3:
+            raise HTTPException(422, "props_scatter requires three different properties")
+        thresholds_in = (threshold_a, threshold_b, threshold_c)
+        thresholds = (
+            tuple(float(t) for t in thresholds_in)
+            if all(t is not None for t in thresholds_in)
+            else None
+        )
+        filters: dict[str, list[str]] = {}
+        if elements:
+            filters["elements"] = parse_multi(elements)
+        if journal:
+            filters["journal"] = parse_multi(journal)
+        if app:
+            filters["application"] = parse_multi(app)
+        rows = await fetch_property_rows(
+            client,
+            filters=filters,
+            property_slugs=list(slugs),
+        )
+        return {"kind": kind, **build_props_scatter(rows, *slugs, thresholds=thresholds)}
+
     if kind == "gsc":
         if not property_a or not property_b:
             raise HTTPException(422, "gsc requires ?property_a=<slug>&property_b=<slug>")

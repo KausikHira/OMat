@@ -1,8 +1,9 @@
 """Row -> Record transform and the validate/index pipeline stages.
 
 Source columns (final_data.csv): Article PII, DOI, Composition, Property,
-Elements, APL_Group, Paper_Link. Cells are Python literals parsed with
-ast.literal_eval.
+Elements, APL_Group, Paper_Link, Title. Literal-shaped cells (Composition,
+Property, Elements, APL_Group) are parsed with ast.literal_eval; PII, DOI,
+Paper_Link, and Title are plain strings.
 """
 
 from __future__ import annotations
@@ -36,7 +37,27 @@ from omat_core.taxonomy import Taxonomy
 
 logger = logging.getLogger(__name__)
 
-COLUMNS = ["Article PII", "DOI", "Composition", "Property", "Elements", "APL_Group", "Paper_Link"]
+COLUMNS = [
+    "Article PII",
+    "DOI",
+    "Composition",
+    "Property",
+    "Elements",
+    "APL_Group",
+    "Paper_Link",
+    "Title",
+]
+
+# Titles come from Crossref via PII mapping; cap every untrusted cell before
+# it reaches the index (same rule as the other string columns).
+MAX_TITLE_LENGTH = 1024
+
+
+def normalize_title(raw: str | None) -> str | None:
+    title = (raw or "").strip()
+    if len(title) > MAX_TITLE_LENGTH:
+        title = title[:MAX_TITLE_LENGTH].rstrip()
+    return title or None
 
 
 @dataclass
@@ -85,7 +106,7 @@ def row_to_record(
         _reject(stats, rejects, row_index, "short_row", f"{len(row)} columns", row)
         return None
 
-    pii_raw, doi_raw, comp_cell, prop_cell, elements_cell, apl_cell, link = row[:7]
+    pii_raw, doi_raw, comp_cell, prop_cell, elements_cell, apl_cell, link, title_raw = row[:8]
 
     pii = normalize_pii(pii_raw)
     if pii is None:
@@ -156,6 +177,7 @@ def row_to_record(
         article_pii=pii,
         doi=doi,
         paper_link=link.strip() or None,
+        title=normalize_title(title_raw),
         has_composition=has_composition,
         has_property=has_property,
         composition=composition,

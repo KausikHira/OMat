@@ -16,7 +16,11 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
-SCHEMA_VERSION = "1"
+# v2: documents now carry `title` (mapped from the CSV's Title column via
+# PII/Crossref). The index mapping is unchanged — the field was declared from
+# the start — but v2 forces a fresh papers_v2 build + alias swap so the old
+# index stays as a rollback.
+SCHEMA_VERSION = "2"
 
 
 class SpeciesAmount(BaseModel):
@@ -99,6 +103,11 @@ class Record(BaseModel):
     journal: Journal | None = None
     year: int | None = None
     applications: list[Application] = Field(default_factory=list)
+
+    # Paper-level enrichment: populated by the ingest pipeline from the CSV's
+    # Title column (PII -> Crossref title). Absent for unenriched sources.
+    title: str | None = None
+    abstract: str | None = None
 
     search_text: str = ""
 

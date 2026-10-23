@@ -70,7 +70,10 @@ export type FacetsResponse = {
 
 // ---- GSC (glass-structure-composition) chart ----------------------------------
 
-export type GscPoint = { x: number; y: number };
+// The API serializes each point as a bare [x, y] tuple (omat_core.gsc
+// emits lists, not objects), so the client type must match the wire format.
+// The web adapter converts tuples to the {x, y} shape its chart code uses.
+export type GscPoint = [number, number];
 
 export type GscAxis = { slug?: string; name?: string; unit?: string };
 
@@ -108,6 +111,54 @@ export function fetchGsc(params: GscParams, signal?: AbortSignal): Promise<GscRe
   for (const journal of params.journal ?? []) search.append("journal", journal);
   for (const app of params.app ?? []) search.append("app", app);
   return getJson<GscResponse>(`/v1/aggregates?${search.toString()}`, signal);
+}
+
+// ---- props_scatter (three-property notebook chart) ----------------------------
+
+// Each point is a bare [x, y, z, highlighted] tuple on the wire (py-core
+// emits lists, not objects); the web adapter converts to objects.
+export type PropsScatterPoint = [number, number, number, number];
+
+export type PropsScatterResponse = {
+  kind?: "props_scatter";
+  property_a?: GscAxis;
+  property_b?: GscAxis;
+  property_c?: GscAxis;
+  thresholds?: number[] | null;
+  points?: PropsScatterPoint[];
+  bounds?: { a: [number, number]; b: [number, number]; c: [number, number] };
+  counts?: { merged: number; plotted: number; highlighted: number };
+};
+
+export type PropsScatterParams = {
+  property_a: string;
+  property_b: string;
+  property_c: string;
+  threshold_a?: number;
+  threshold_b?: number;
+  threshold_c?: number;
+  elements?: string[];
+  journal?: string[];
+  app?: string[];
+};
+
+export function fetchPropsScatter(
+  params: PropsScatterParams,
+  signal?: AbortSignal,
+): Promise<PropsScatterResponse> {
+  const search = new URLSearchParams({
+    kind: "props_scatter",
+    property_a: params.property_a,
+    property_b: params.property_b,
+    property_c: params.property_c,
+  });
+  if (params.threshold_a !== undefined) search.set("threshold_a", String(params.threshold_a));
+  if (params.threshold_b !== undefined) search.set("threshold_b", String(params.threshold_b));
+  if (params.threshold_c !== undefined) search.set("threshold_c", String(params.threshold_c));
+  for (const element of params.elements ?? []) search.append("elements", element);
+  for (const journal of params.journal ?? []) search.append("journal", journal);
+  for (const app of params.app ?? []) search.append("app", app);
+  return getJson<PropsScatterResponse>(`/v1/aggregates?${search.toString()}`, signal);
 }
 
 // ---- Query params -----------------------------------------------------------

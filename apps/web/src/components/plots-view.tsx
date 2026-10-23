@@ -1,8 +1,6 @@
 import type { ReactNode } from "react";
 
-import { GscChartPlot } from "@/components/gsc-chart";
 import type { PairOption } from "@/lib/gsc";
-import type { GscChart } from "@/lib/gsc";
 import type { PaperGroup } from "@/lib/papers";
 import {
   type SeriesPoint,
@@ -11,7 +9,10 @@ import {
   getPapersByJournal,
   getPapersByYear,
 } from "@/lib/plots";
+import type { PropsScatterChart } from "@/lib/props-scatter";
 import type { SearchState } from "@/lib/search";
+
+import { PropsScatterChartPlot, criteriaLine } from "./props-scatter-chart";
 
 type ChartFrameProps = {
   title: string;
@@ -115,23 +116,59 @@ function HorizontalBars({ title, caption, points, emptyLabel }: HorizontalBarsPr
   );
 }
 
-type PairSelectProps = {
+type TripleSelectProps = {
   query: SearchState;
-  pair: { a: string; b: string };
+  triple: { a: string; b: string; c: string };
+  thresholds: [number, number, number] | null;
   options: PairOption[];
 };
 
-/** Plain GET form so any property pair is a shareable /search URL. */
-function PairSelect({ query, pair, options }: PairSelectProps) {
-  if (options.length < 2) {
-    return null; // no pairable properties in this result set
+/**
+ * Plain GET form so any property triple + criteria set is a shareable URL
+ * (propX / propY / propZ, thX / thY / thZ), mirroring the notebook's
+ * criteria-8 style thresholds.
+ */
+function TripleSelect({ query, triple, thresholds, options }: TripleSelectProps) {
+  if (options.length < 3) {
+    return null; // not enough multi-property materials in this result set
   }
+
+  const select = (name: string, label: string, value: string) => (
+    <label className="flex flex-col gap-1.5">
+      <span className="text-muted">{label}</span>
+      <select
+        name={name}
+        defaultValue={value}
+        className="border border-line-strong bg-panel px-2.5 py-1.5 text-ink outline-none"
+      >
+        {options.map((option) => (
+          <option key={option.slug} value={option.slug}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+
+  const threshold = (name: string, label: string, value: number | undefined) => (
+    <label className="flex flex-col gap-1.5">
+      <span className="text-muted">{label} ≥</span>
+      <input
+        type="number"
+        step="any"
+        name={name}
+        defaultValue={value}
+        placeholder="—"
+        className="w-24 border border-line-strong bg-panel px-2.5 py-1.5 text-ink outline-none"
+      />
+    </label>
+  );
 
   return (
     <form
       action="/search"
       method="get"
-      aria-label="Choose the GSC property pair"
+      aria-label="Choose the plotted properties and criteria"
       className="flex flex-wrap items-end gap-4 text-[12px]"
     >
       <input type="hidden" name="tab" value="plots" />
@@ -144,34 +181,12 @@ function PairSelect({ query, pair, options }: PairSelectProps) {
       ))}
       {query.journal ? <input type="hidden" name="journal" value={query.journal} /> : null}
 
-      <label className="flex flex-col gap-1.5">
-        <span className="text-muted">X property</span>
-        <select
-          name="gscA"
-          defaultValue={pair.a}
-          className="border border-line-strong bg-panel px-2.5 py-1.5 text-ink outline-none"
-        >
-          {options.map((option) => (
-            <option key={option.slug} value={option.slug}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-      </label>
-      <label className="flex flex-col gap-1.5">
-        <span className="text-muted">Y property</span>
-        <select
-          name="gscB"
-          defaultValue={pair.b}
-          className="border border-line-strong bg-panel px-2.5 py-1.5 text-ink outline-none"
-        >
-          {options.map((option) => (
-            <option key={option.slug} value={option.slug}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-      </label>
+      {select("propX", "X property", triple.a)}
+      {select("propY", "Y property", triple.b)}
+      {select("propZ", "Color property", triple.c)}
+      {threshold("thX", "X criteria", thresholds?.[0])}
+      {threshold("thY", "Y criteria", thresholds?.[1])}
+      {threshold("thZ", "Color criteria", thresholds?.[2])}
       <button
         type="submit"
         className="rounded-[7px] bg-accent px-4 py-2 text-[12px] font-medium text-accent-ink transition-opacity hover:opacity-85"
@@ -182,30 +197,49 @@ function PairSelect({ query, pair, options }: PairSelectProps) {
   );
 }
 
-type GscSectionProps = {
+type PropsScatterSectionProps = {
   query: SearchState;
-  pair: { a: string; b: string };
+  triple: { a: string; b: string; c: string };
+  thresholds: [number, number, number] | null;
   options: PairOption[];
-  chart: GscChart;
+  chart: PropsScatterChart;
 };
 
-function GscSection({ query, pair, options, chart }: GscSectionProps) {
+function PropsScatterSection({
+  query,
+  triple,
+  thresholds,
+  options,
+  chart,
+}: PropsScatterSectionProps) {
+  const criteria = criteriaLine(chart);
+  const { counts } = chart;
+
   return (
     <ChartFrame
-      title="Property correlation by composition family"
-      caption={`${chart.propertyA.name} vs ${chart.propertyB.name}: each blob is the
-        smoothed convex hull of one element family, as in the GSC analysis.`}
+      title="Property map with material criteria"
+      caption={`${counts.plotted} materials measured for all three properties (${counts.merged} before 1st/99th percentile filtering). Materials meeting every criterion are ringed in blue.`}
     >
+      {criteria ? (
+        <p className="mt-4 text-[13px] font-semibold text-ink">{criteria}</p>
+      ) : (
+        <p className="mt-4 text-[12px] text-muted">
+          Enter all three criteria below to highlight the materials that satisfy them.
+        </p>
+      )}
+
       <div className="mt-4">
-        <PairSelect query={query} pair={pair} options={options} />
+        <TripleSelect query={query} triple={triple} thresholds={thresholds} options={options} />
       </div>
+
       <div className="mt-4">
-        {chart.families.length > 0 ? (
-          <GscChartPlot chart={chart} />
+        {chart.points.length > 0 ? (
+          <PropsScatterChartPlot chart={chart} />
         ) : (
           <p className="py-10 text-center text-[12px] text-muted">
-            No material in this result set measured both {chart.propertyA.name.toLowerCase()} and{" "}
-            {chart.propertyB.name.toLowerCase()}. Pick another pair.
+            No material in this result set was measured for {chart.propertyA.name.toLowerCase()},{" "}
+            {chart.propertyB.name.toLowerCase()}, and {chart.propertyC.name.toLowerCase()} together.
+            Pick another combination.
           </p>
         )}
       </div>
@@ -215,10 +249,10 @@ function GscSection({ query, pair, options, chart }: GscSectionProps) {
 
 export function PlotsView({
   papers,
-  gsc,
+  propsScatter,
 }: {
   papers: PaperGroup[];
-  gsc: GscSectionProps;
+  propsScatter: PropsScatterSectionProps;
 }) {
   const recordCount = papers.reduce((sum, paper) => sum + paper.records.length, 0);
 
@@ -228,7 +262,7 @@ export function PlotsView({
         Aggregates include all {papers.length} papers in this result set, not just the current page.
       </p>
 
-      <GscSection {...gsc} />
+      <PropsScatterSection {...propsScatter} />
 
       <YearChart points={getPapersByYear(papers)} />
 

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { streamPaperChat } from "@omat/api-client";
 
+import { Markdown } from "@/components/markdown";
 import { type ChatMessage, offlinePaperReply } from "@/lib/paper-chat";
 import type { PaperGroup } from "@/lib/papers";
 
@@ -227,7 +228,15 @@ export function PaperChat({ paper }: PaperChatProps) {
                           : "max-w-[92%] rounded-[10px] border border-line bg-panel px-3.5 py-2.5 text-[12.5px] leading-5 text-ink"
                       }
                     >
-                      <p className="whitespace-pre-wrap">{message.text || "…"}</p>
+                      {message.text ? (
+                        message.role === "assistant" ? (
+                          <Markdown text={message.text} />
+                        ) : (
+                          <p className="whitespace-pre-wrap">{message.text}</p>
+                        )
+                      ) : (
+                        <p className="whitespace-pre-wrap">…</p>
+                      )}
                       {message.offline && message.text ? (
                         <p className="mt-1.5 text-[10px] uppercase tracking-[0.06em] text-muted">
                           offline · records only

@@ -44,16 +44,19 @@ export function PaperRow({ paper }: PaperRowProps) {
             </h2>
           </div>
 
-          {paper.doiHref ? (
-            <a
-              href={paper.doiHref}
-              target="_blank"
-              rel="noreferrer noopener"
-              className="shrink-0 text-[11px] text-accent underline decoration-accent/40 underline-offset-4 transition-colors hover:decoration-accent"
-            >
-              Read paper ↗
-            </a>
-          ) : null}
+          <div className="ml-auto flex shrink-0 flex-col items-end gap-2">
+            {paper.doiHref ? (
+              <a
+                href={paper.doiHref}
+                target="_blank"
+                rel="noreferrer noopener"
+                className="text-[11px] text-accent underline decoration-accent/40 underline-offset-4 transition-colors hover:decoration-accent"
+              >
+                Read paper ↗
+              </a>
+            ) : null}
+            <PaperChat paper={paper} />
+          </div>
         </div>
 
         <p
@@ -102,21 +105,18 @@ export function PaperRow({ paper }: PaperRowProps) {
               {application.label}
             </span>
           ))}
-          <div className="flex min-w-0 items-center gap-2">
-            {paper.doiHref ? (
-              <a
-                href={paper.doiHref}
-                target="_blank"
-                rel="noreferrer noopener"
-                className="min-w-0 max-w-full truncate transition-colors hover:text-ink hover:underline"
-              >
-                doi.org/{paper.doi}
-              </a>
-            ) : paper.doi ? (
-              <span className="min-w-0 max-w-full truncate">{paper.doi}</span>
-            ) : null}
-            <PaperChat paper={paper} />
-          </div>
+          {paper.doiHref ? (
+            <a
+              href={paper.doiHref}
+              target="_blank"
+              rel="noreferrer noopener"
+              className="max-w-full truncate transition-colors hover:text-ink hover:underline"
+            >
+              doi.org/{paper.doi}
+            </a>
+          ) : paper.doi ? (
+            <span className="max-w-full truncate">{paper.doi}</span>
+          ) : null}
         </div>
       </article>
     </li>

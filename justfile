@@ -23,7 +23,7 @@ dev-api:
 dev-mcp:
     {{python}} -m omat_mcp.server
 
-index path="data/raw":
+index path="data/final_data.csv":
     {{python}} -m omat_ingest.cli index {{path}}
 
 test:

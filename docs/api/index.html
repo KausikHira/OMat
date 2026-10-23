@@ -5,13 +5,47 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>OMAT-SE API reference</title>
     <link rel="icon" type="image/x-icon" href="./favicon.ico" />
+    <style>
+      /* Scalar has no config flag for its footer credit; hide the generated link. */
+      a[href*="utm_source=powered-by"] {
+        display: none !important;
+      }
+
+      /* Link back to the app, in the space the Scalar credit used to occupy. */
+      #home-link {
+        position: fixed;
+        bottom: 14px;
+        left: 14px;
+        z-index: 100;
+        font: 500 13px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif;
+        color: var(--scalar-color-2, #6b7280);
+        text-decoration: none;
+        opacity: 0.75;
+      }
+
+      #home-link:hover,
+      #home-link:focus-visible {
+        opacity: 1;
+        text-decoration: underline;
+      }
+
+      /* On narrow screens the sidebar collapses and the link would cover content. */
+      @media (max-width: 767px) {
+        #home-link {
+          display: none;
+        }
+      }
+    </style>
   </head>
   <body>
+    <a id="home-link" href="https://omat-se.vercel.app">OMAT-SE &#8599;</a>
     <div id="app"></div>
     <script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference"></script>
     <script>
       Scalar.createApiReference("#app", {
         url: "./openapi.json",
+        hideClientButton: true,
+        showDeveloperTools: "never",
       });
     </script>
   </body>

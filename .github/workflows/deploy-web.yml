@@ -37,18 +37,34 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Check Vercel credentials
+        id: vercel
+        shell: bash
+        run: |
+          if [ -z "${VERCEL_TOKEN:-}" ]; then
+            echo "::notice::VERCEL_TOKEN is not set; skipping the Vercel deployment."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - uses: oven-sh/setup-bun@v2
+        if: steps.vercel.outputs.skip != 'true'
         with:
           bun-version: latest
 
       - name: Install workspace
+        if: steps.vercel.outputs.skip != 'true'
         run: bun install --frozen-lockfile
 
       - name: Pull Vercel environment
+        if: steps.vercel.outputs.skip != 'true'
         run: bunx vercel@latest pull --yes --environment=production --token="$VERCEL_TOKEN"
 
       - name: Build
+        if: steps.vercel.outputs.skip != 'true'
         run: bunx vercel@latest build --prod --token="$VERCEL_TOKEN"
 
       - name: Deploy
+        if: steps.vercel.outputs.skip != 'true'
         run: bunx vercel@latest deploy --prebuilt --prod --token="$VERCEL_TOKEN"

@@ -2,55 +2,50 @@
 
 ## Source columns
 
-The CSV has eleven columns. The original brief listed ten; compared with that
-list, `Elements`, `APL_Group`, and `Date` are present in the data, `Paper_Link`
-is absent, and `Applications` is stored as `APL_Group`.
+`data/final_data.csv` has eight columns. Journal, year, and record identity are
+derived during ingest.
 
 | Source | Meaning | Notes |
 | --- | --- | --- |
 | `Article PII` | Publisher Item Identifier | Not personal data |
-| `DOI` | Paper DOI | Normalize to lowercase, strip `https://doi.org/` |
-| `Table No.` | Table references | Python list literal, e.g. `[1]` |
-| `ID` | Source material label/identifier | Verify whether it repeats across papers |
-| `Proxy_ID` | Record identifier | Primary key, paper PII + row |
-| `Composition` | Label + elemental amounts | Python literal; authoritative amounts |
-| `Property` | `(name, value, unit)` | Tuple or list of tuples |
-| `Journal_Name` | Journal | Underscored source label |
-| `Elements` | Element set | Python set literal; must match composition |
-| `APL_Group` | Application group | Python list literal |
-| `Date` | Year | Integer, no month/day |
+| `DOI` | Paper DOI | Normalized to lowercase, no `https://doi.org/` prefix |
+| `Composition` | Elemental/species amounts | Python list literal; authoritative composition |
+| `Property` | `(name, value, unit)` | One tuple per row, or an empty tuple for composition-only rows |
+| `Elements` | Element set | Python set literal; compared with the expanded composition |
+| `APL_Group` | Application groups | Python list literal; may be empty |
+| `Paper_Link` | DOI link from the source | Stored for provenance; clients derive display links from `doi` |
+| `Title` | Paper title | Populated from the CSV (Crossref mapping by PII); may be empty |
 
-Derived fields: `paper_link` (`https://doi.org/<doi>`), canonical formula, at%
-amounts, element vector, and `search_text`. The CSV also carries a `Title`
-column (paper titles mapped from Crossref by PII) that the ingest pipeline
-indexes into the `title` field; rows without a title index `null`.
+Derived fields: `record_id` (stable hash of PII + DOI + row index), normalized
+DOI, journal metadata (from the DOI path), year (from Elsevier DOI patterns),
+expanded at% amounts, application slugs, and `search_text`.
 
 ## Canonical document
 
 ```json
 {
-  "record_id": "S0167577X2031716X_0_R_5::youngs_modulus",
-  "proxy_id": "S0167577X2031716X_0_R_5",
+  "record_id": "c638e9bcdb41c43f",
+  "row_index": 1,
   "article_pii": "S0167577X2031716X",
   "doi": "10.1016/j.matlet.2020.129009",
   "paper_link": "https://doi.org/10.1016/j.matlet.2020.129009",
-  "legacy_id": "TiAl70CrN",
-  "table_nos": [1],
-  "year": 2020,
-  "journal": {
-    "raw": "Materials_Letters",
-    "name": "Materials Letters",
-    "slug": "materials-letters"
-  },
+  "has_composition": true,
+  "has_property": true,
   "composition": {
-    "label": "TiAl70CrN",
-    "elements": ["Al", "Cr", "N", "Ti"],
-    "elemental": [
-      { "symbol": "Al", "value": 95.89, "unit": "mol", "at_pct": 95.89 },
-      { "symbol": "Cr", "value": 1.37, "unit": "mol", "at_pct": 1.37 }
+    "label": null,
+    "species": [
+      { "symbol": "Al", "value": 95.89, "unit": "mol" },
+      { "symbol": "Cr", "value": 1.37, "unit": "mol" },
+      { "symbol": "N", "value": 1.37, "unit": "mol" },
+      { "symbol": "Ti", "value": 1.37, "unit": "mol" }
     ],
-    "canonical": "Al95.89-Cr1.37-N1.37-Ti1.37",
-    "vector": []
+    "elements": [
+      { "symbol": "Al", "at_pct": 95.89 },
+      { "symbol": "Cr", "at_pct": 1.37 },
+      { "symbol": "N", "at_pct": 1.37 },
+      { "symbol": "Ti", "at_pct": 1.37 }
+    ],
+    "canonical": "Al95.89-Cr1.37-N1.37-Ti1.37"
   },
   "property": {
     "raw": "Youngs modulus",
@@ -58,82 +53,87 @@ indexes into the `title` field; rows without a title index `null`.
     "slug": "youngs_modulus",
     "value": 467.0,
     "unit": "GPa",
-    "value_si": 4.67e11
+    "value_si": 467000000000.0
   },
-  "applications": [{ "raw": "Coatings / Barriers", "slug": "coatings-barriers" }],
-  "search_text": "TiAl70CrN Al Cr N Ti Youngs modulus Materials Letters Coatings Barriers"
+  "elements": ["Al", "Cr", "N", "Ti"],
+  "species": ["Al", "Cr", "N", "Ti"],
+  "journal": {
+    "raw": "Materials Letters",
+    "name": "Materials Letters",
+    "slug": "matlet"
+  },
+  "year": 2020,
+  "applications": [
+    { "raw": "Coatings / Barriers", "slug": "coatings-barriers" }
+  ],
+  "title": "Micro-scale impact resistance of coatings on hardened tool steel and cemented carbide",
+  "abstract": null,
+  "search_text": "Al95.89-Cr1.37-N1.37-Ti1.37 Al Cr N Ti Young's modulus Materials Letters Coatings Barriers"
 }
 ```
+
+The example omits `composition.vector`, a 118-value periodic-table-ordered array
+used by the kNN field. `composition.label` is `null` for the current CSV because
+the source has no separate label column; `canonical` is the display formula.
 
 ## Index fields
 
 | Field | Type | Purpose |
 | --- | --- | --- |
-| `doi`, `article_pii`, `proxy_id`, `legacy_id` | keyword | Exact lookup and joins |
-| `paper_link` | keyword (index: false) | Display only |
-| `journal.name` / `.slug` | text / keyword | Search / facet |
-| `composition.label` | text + keyword | Label search and exact match |
-| `composition.elements` | keyword | Multi-select element facet |
-| `composition.elemental` | object/nested | Amounts and provenance |
-| `composition.canonical` | keyword | Dedupe and exact composition match |
-| `composition.vector` | knn_vector | Similar compositions (phase 2) |
-| `property.name` / `.slug` | text / keyword | Search / facet |
-| `property.value` | double | Range filter and sort |
-| `property.unit` | keyword | Display and facet |
-| `applications.slug` | keyword | Application facet |
+| `record_id`, `article_pii`, `doi` | keyword | Record identity and exact lookup |
+| `row_index` | integer | Source order and stable tiebreaker |
+| `paper_link` | keyword (index: false) | Display/provenance only |
+| `has_composition`, `has_property` | boolean | Coverage and analytics filters |
+| `composition.label` | keyword | Source label, when present |
+| `composition.species` | object | Amounts as written (`symbol`, `value`, `unit`) |
+| `composition.elements` | object | Expanded atoms (`symbol`, `at_pct`) |
+| `composition.canonical` | keyword | Exact composition match |
+| `composition.vector` | knn_vector | 118-dim composition similarity |
+| `elements` / `species` | keyword | Element and species facets |
+| `property.raw` / `.name` | text | Property search |
+| `property.slug` | keyword | Property facet and exact filter |
+| `property.value` / `.value_si` | double | Range filter and sort |
+| `property.unit` | keyword | Display |
+| `journal.name` | text + keyword subfield | Search and facet |
+| `journal.raw` / `.slug` | keyword | Provenance and facet |
 | `year` | integer | Range filter and histogram |
-| `table_nos` | integer | Provenance |
+| `applications.raw` / `.slug` | keyword | Application facet |
 | `search_text` | text | Catch-all BM25 field |
-| `title`, `abstract` | text | Enrichment fields used by paper listings |
-
-`title` is populated by the ingest pipeline from the CSV's `Title` column
-(Crossref titles mapped by PII). `abstract` is still an optional enrichment
-field left empty by the CSV pipeline; a later enrichment pass may populate it.
-The web app falls back to a "Paywalled source" label when a record has no
-title.
+| `title`, `abstract` | text | Paper metadata and search |
+| `authors`, `related_papers` | keyword | Declared for enrichment; currently empty |
 
 ## Query interpretation
 
-Free-text queries are rewritten in `py-core` before they hit the index:
-
-1. Conversational filler (`I want to`, `should I use`, …) is dropped from the
-   text match. Original token casing is preserved so `TiAlN` still tokenizes.
-2. Domain words are mapped to taxonomy facets through the curated lexicon
-   `data/taxonomy/intents.yaml` ("house", "riverbed", "concrete" →
-   `applications.slug: structural-mechanical`; "stiff" →
-   `property.slug: youngs_modulus`). Facet hits become boosted `should`
-   clauses, never hard filters.
-3. Lexicon synonyms expand the text ("concrete" → "cement mortar").
-
-This is keyword-only; no embeddings are involved. Technical queries pass
-through untouched. Full search semantics: [search.md](search.md).
+Free-text queries are rewritten in `py-core` before they reach the index: filler
+removal, curated intent mapping, and synonym expansion. See
+[search.md](search.md) for the full rules and examples.
 
 ## Validation rules
 
-- `proxy_id` must be unique per property; duplicates keep the latest `Date` and
-  are reported.
-- Elemental amounts sum to 100 ± 0.5.
-- Symbols in `Elements` must match symbols in the composition amounts.
-- Property values are finite numbers; units must exist in `units.yaml`.
-- Year is between 1900 and 2027, otherwise null.
-- DOI matches `^10\.\d{4,9}/\S+$`.
-- Empty `APL_Group` becomes `unclassified`; records are never dropped for it.
+- `Article PII` must match `^S\d{7}[0-9X]\d{7}[0-9X]$` (uppercase, 17 chars).
+- DOI must match `^10\.\d{4,9}/\S+$`.
+- `Composition` and `Elements` are Python literals parsed with
+  `ast.literal_eval`; cells are length-capped before parsing.
+- `mol` amounts are already at%; `wt` amounts are converted to at%. Compound
+  species expand to their constituent atoms.
+- Negative amounts and bucket labels such as `Others` are dropped with a
+  warning. Raw amounts outside 99–101 are warned about, not rejected.
+- A mismatch between `Elements` and the expanded composition is a warning, not a
+  rejection or a silent rewrite.
+- A non-empty `Property` must be a `(name, value, unit)` tuple. An empty tuple
+  marks a composition-only row.
+- Unknown property names and units are kept with a derived slug / identity
+  conversion; taxonomy curation happens separately in `data/taxonomy/`.
+- Year is parsed from the DOI and is `null` when absent or outside 1900–2027.
+- Duplicate records are detected by DOI + canonical composition + property slug +
+  value; later duplicates are counted and dropped.
+- Empty `APL_Group` becomes an empty application list; records are never dropped
+  for it.
+- Rejected rows are written to `data/rejects/rejects.jsonl` (or the `--rejects`
+  directory) with the source row preview and a machine-readable reason.
 
-Rejected rows are written to `data/rejects/<run>/` with the original line and a
-machine-readable reason, so the cleaning rules can be tuned without guesswork.
+## Search response
 
-## API envelope
-
-```json
-{
-  "data": [],
-  "total": 12400,
-  "facets": {},
-  "took_ms": 12,
-  "cursor": "opaque-base64",
-  "index_version": "papers_v1"
-}
-```
-
-`total` may be capped for large result sets. The cursor is the only supported
-pagination mechanism; offsets are not exposed.
+`GET /v1/search` returns `{ data, total, took_ms, cursor }`. Facets come from
+`GET /v1/facets`; they are not embedded in the search response. See
+[search.md](search.md) for cursor and caching rules.

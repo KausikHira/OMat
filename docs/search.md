@@ -38,7 +38,7 @@ changes nothing and fires no facets.
 - Filters are term-level `bool.filter` clauses: **OR within a field, AND
   across fields**. Available filter fields: `elements`, `property` (+ `min`/
   `max` numeric range on `property.value_si`), `journal`, `app`, `year_from`/
-  `year_to`, `doi`, `pii`.
+  `year_to`. DOI/PII lookups use the paper endpoint.
 - Sort options: `relevance` (default), `year_desc`, `year_asc`, `value_asc`,
   `value_desc` (value sorts require a `property`).
 - Pagination is cursor-based (`search_after` + opaque base64 cursor). Deep
@@ -57,7 +57,10 @@ changes nothing and fires no facets.
 | `GET /v1/literature/trends` | Keyword publication trends via Valency (`keyword`, optional `category`) |
 | `GET /v1/literature/related` | Related preprints from semantic + title matches (`q`, `limit`) |
 | `POST /v1/papers/{id_or_doi}/chat` | Per-paper Gemini chat over SSE; context is that paper's records |
-| `GET /healthz` | Liveness |
+| `GET /healthz` | Liveness (`/health` is an alias for probes) |
+
+There is no application authentication. Admin ingest routes are local operator
+tools; do not expose them through public ingress.
 
 The MCP server (`apps/mcp`) exposes the same semantics as tools by importing
 the same py-core builders, so an agent search and a UI search cannot drift:
@@ -82,11 +85,14 @@ both surfaces reduce documents identically.
 { "data": [], "total": 12400, "took_ms": 12, "cursor": "opaque-base64" }
 ```
 
-`facets` and `index_version` (documented in [schema.md](schema.md)) are
-pending; facet counts come from `GET /v1/facets` today. First-page queries are
-cached in Redis for 60 s keyed on the normalized query parameters. API calls
-from the web app time out after 10 s and fall back to mock records in
-development, so a wedged API worker can never stall server rendering.
+Search responses contain `data`, `total`, `took_ms`, and `cursor`; facet counts
+come from the separate `GET /v1/facets` endpoint. `facets` and `index_version`
+are not embedded in the search response.
+
+First-page queries are cached in Redis for 60 s keyed on the normalized query
+parameters. Alias swaps do not purge that cache, so a reindex can leave up to
+60 s of stale results. Web requests time out after 10 s and fall back to mock
+records, so a wedged API worker cannot stall server rendering.
 
 ## Examples
 

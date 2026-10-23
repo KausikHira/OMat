@@ -6,9 +6,9 @@ export type PaperMetadata = {
 /**
  * Local paper metadata for the mock fallback.
  *
- * The source CSV has no title or abstract columns. Live API records may carry
- * enriched `title`/`abstract` fields; these entries keep the mock path
- * representative until the enrichment pipeline is wired up.
+ * The source CSV has a `Title` column but no abstract column. Live API records
+ * may carry `title`/`abstract`; these entries keep the mock path representative
+ * when the API is unavailable.
  */
 export const PAPER_METADATA: Record<string, PaperMetadata> = {
   "10.1016/j.matlet.2020.129009": {

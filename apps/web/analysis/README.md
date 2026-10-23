@@ -10,8 +10,8 @@ this notebook:
 
 - `packages/py-core/src/omat_core/gsc.py` — canonical pairing, families, hull,
   and smoothing used by `GET /v1/aggregates?kind=gsc`.
-- `apps/web/src/lib/gsc.ts` — TypeScript mirror used for the local mock dataset,
-  with the Plotly wrapper in `apps/web/src/components/gsc-chart.tsx`.
+- `apps/web/src/lib/gsc.ts` — TypeScript mirror used for the local mock dataset
+  and the server-rendered SVG chart components.
 
 The notebook depends on SciPy (`ConvexHull`, `splprep`/`splev`). The production
 code replaces that with a monotone-chain hull and two-round Chaikin smoothing so

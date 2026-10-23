@@ -20,7 +20,8 @@ def index_name(version: str = INDEX_VERSION) -> str:
 
 
 def papers_mapping() -> dict[str, Any]:
-    """Mapping for papers_v1. Keyword arrays for facets; doubles for ranges."""
+    """Mapping for the current `papers_vN` index. Keyword arrays for facets;
+    doubles for range filters and sorting."""
     return {
         "settings": {
             "index": {

@@ -15,9 +15,10 @@ with charts, plus a chat panel for a single paper.
 1. **OpenSearch 2.x is the search engine.** BM25, aggregations, and a numeric
    kNN field cover the product without adding a vector database. Managed service
    in AWS, single node locally.
-2. **One document per measurement property.** Rows with multiple property tuples
-   are exploded at ingest. This keeps facets, range filters, and value sorting
-   cheap. `proxy_id` regroups documents for display.
+2. **One document per measurement property.** The current CSV has one property
+   tuple per row; a future multi-property row should be exploded at ingest. This
+   keeps facets, range filters, and value sorting cheap. `record_id` identifies
+   the property document; the web groups by DOI/PII for display.
 3. **Raw values are preserved.** Every normalized field sits next to the original
    source string. Cleaning never destroys evidence.
 4. **Python owns the domain.** `packages/py-core` is imported by the API, MCP
@@ -32,8 +33,8 @@ with charts, plus a chat panel for a single paper.
    or Redpanda Cloud the deployed one.
 7. **Per-paper chat does not use RAG.** The paper's rows fit in context, or fit
    behind read-only tools. No chunk index, no embeddings, no PDF pipeline.
-8. **Next.js renders on the server.** Search and paper pages are public and
-   linkable; SSR plus stable URLs are better for discovery than a pure SPA.
+8. **Next.js renders on the server.** Search views are public and linkable; SSR
+   plus stable URLs are better for discovery than a pure SPA.
 9. **Composition similarity uses a 118-dim vector.** Periodic-table ordering
    makes Euclidean distance meaningful and avoids text embeddings for chemistry.
 10. **The web app deploys on Vercel; the API deploys on AWS.** The Next.js
@@ -41,11 +42,14 @@ with charts, plus a chat panel for a single paper.
     deployments are useful for UI review. API, MCP, and workers stay on ECS
     Fargate next to OpenSearch. The API reference is generated from FastAPI and
     published to GitHub Pages.
+11. **There is no application authentication.** The corpus is public and
+    read-only: no accounts, saved searches, or sessions. Admin ingest is a local
+    operator path and must not be exposed through public ingress.
 
 ## Consequences
 
-- Reindexing requires a new `papers_vN` index and an alias swap. Cache keys must
-  include the index version.
+- Reindexing requires a new `papers_vN` index and an alias swap. The 60 s search
+  cache is not keyed by index version, so stale results are bounded by the TTL.
 - Unit and property taxonomies become operational data that must be reviewed, not
   code that silently guesses.
 - The chat endpoint can only answer from the columns present. It must refuse

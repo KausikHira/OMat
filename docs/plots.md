@@ -1,8 +1,9 @@
 # Plots
 
-The Plots tab (`/search?tab=plots`) renders aggregate views of the current
-result set. Charts are always fed by the aggregate endpoint, never by the raw
-result set in the browser.
+The Plots tab (`/search?tab=plots`) renders aggregate views. The three-property
+scatter and GSC chart are fed by the aggregate endpoint; the secondary summaries
+are computed server-side from the current result set. Raw result sets are never
+shipped to a browser chart library.
 
 ## Property map with material criteria (three-property scatter)
 
@@ -47,8 +48,8 @@ for the merge/filter/flag math. On the wire each point is a bare
 | `gsc` | Two-property family hulls (the earlier `final_gsc_3.ipynb` chart; still served by the API) |
 
 The Plots tab additionally renders papers-by-year, papers-by-journal, and
-measurements-by-property summaries derived server-side from the current page
-of results.
+measurements-by-property summaries derived server-side from the current result
+set (up to the search page limit).
 
 ## Client rendering rules
 

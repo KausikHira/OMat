@@ -1,10 +1,9 @@
 OMAT-SE
 
 Faceted search over materials composition and property measurements.
-Status: phase 0 — search UI on mock data.
 
 Live
-  Frontend       https://omat-se-web.vercel.app
+  Frontend       https://omat-se.vercel.app
   API reference  https://jayesh-dev21.github.io/Omat-se/
 
 Repository
@@ -12,9 +11,9 @@ Repository
   apps/mcp       MCP server (Python SDK)
   apps/web       Next.js UI, deployed on Vercel
   apps/workers   Async consumers (phase 2)
-  packages/      Shared Python domain, ingestion CLI, generated TypeScript client
-  data/          Source CSVs, taxonomy, index mappings
-  infra/         Docker and Terraform
+  packages/      Shared Python domain, ingestion CLI, typed TypeScript client
+  data/          Source CSV, taxonomy, synonyms, staging
+  infra/         Terraform and container placeholders
   docs/          Architecture, schema, ADRs, API reference
   report/        LaTeX write-up
 

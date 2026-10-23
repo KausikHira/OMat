@@ -126,9 +126,21 @@ export function PaperChat({ paper }: PaperChatProps) {
         onClick={() => setOpen(true)}
         aria-label={`Chat about ${paper.title}`}
         title="Chat about this paper"
-        className="grid size-8 shrink-0 place-items-center rounded-full border border-line-strong bg-panel font-mono text-[15px] leading-none text-muted transition-colors hover:border-accent hover:bg-accent hover:text-accent-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-canvas"
+        className="grid size-6 shrink-0 place-items-center rounded-full border border-line-strong bg-panel text-muted transition-colors hover:border-accent hover:bg-accent hover:text-accent-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-canvas"
       >
-        <span aria-hidden="true">↵</span>
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.6"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="size-3.5"
+          aria-hidden="true"
+        >
+          <path d="M20 4v7a4 4 0 0 1-4 4H4" />
+          <path d="m9 10-5 5 5 5" />
+        </svg>
       </button>
 
       {open ? (

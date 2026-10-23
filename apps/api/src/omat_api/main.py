@@ -27,7 +27,7 @@ from omat_api.settings import get_settings
 
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncIterator[None]:
-    # Phase 0: validate the index alias and warm shared clients here.
+    # Startup hook: validate the index alias and warm shared clients here.
     yield
 
 
@@ -42,14 +42,15 @@ def create_app() -> FastAPI:
     application.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins,
-        allow_credentials=True,
         allow_methods=["GET", "POST", "OPTIONS"],
         allow_headers=["*"],
     )
     for module in (search, papers, facets, aggregates, suggest, literature, chat, admin):
         application.include_router(module.router, prefix="/v1")
 
+    # /health is an alias for tooling that probes the conventional path.
     @application.get("/healthz", tags=["ops"])
+    @application.get("/health", tags=["ops"], include_in_schema=False)
     async def healthz() -> dict[str, str]:
         return {"status": "ok", "env": settings.env, "version": "0.1.0"}
 

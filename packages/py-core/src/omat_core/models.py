@@ -149,11 +149,9 @@ def make_record_id(article_pii: str, doi: str, row_index: int) -> str:
 
 
 class SearchEnvelope(BaseModel):
-    """Standard API response envelope."""
+    """Search response envelope. Facets are served by `/v1/facets`."""
 
     data: list[Any] = Field(default_factory=list)
     total: int = 0
-    facets: dict[str, Any] = Field(default_factory=dict)
     took_ms: int = 0
     cursor: str | None = None
-    index_version: str = SCHEMA_VERSION

@@ -93,7 +93,7 @@ def _valency_tool() -> dict[str, Any]:
     }
 
 
-async def _sse(message: str) -> str:
+def _sse(message: str) -> str:
     return f"data: {json.dumps({'delta': message})}\n\n"
 
 
@@ -134,7 +134,7 @@ async def paper_chat(
         )
 
     async def stream():
-        yield _sse({"paper": paper["doi"], "records": paper["record_count"]})
+        yield f"data: {json.dumps({'paper': paper['doi'], 'records': paper['record_count']})}\n\n"
         try:
             reply = await provider.complete(
                 SYSTEM_PROMPT,

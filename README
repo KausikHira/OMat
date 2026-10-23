@@ -3,9 +3,9 @@ OMAT-SE
 Faceted search over materials composition and property measurements.
 
 Live
-  Frontend       https://omat-se.vercel.app
-  API reference  https://omat-se-docs.vercel.app/api/
-  MCP reference  https://omat-se-docs.vercel.app/mcp/
+  Frontend       https://omat-kausik-web.vercel.app/
+  API reference  https://omat-se-docs-alpha.vercel.app/api/
+  MCP reference  https://omat-se-docs-alpha.vercel.app/mcp/
 
 Repository
   apps/api       FastAPI service

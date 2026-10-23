@@ -166,9 +166,9 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
   return (
     <div className="flex min-h-svh flex-col">
       <header className="border-b border-line">
-        <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-x-6 gap-y-3 px-5 py-4 sm:px-8">
+        <div className="flex w-full flex-wrap items-center gap-x-6 gap-y-3 px-4 py-4 sm:px-6 lg:px-10 xl:px-14">
           <Wordmark />
-          <div className="order-3 w-full min-w-0 sm:order-none sm:w-auto sm:max-w-2xl sm:flex-1">
+          <div className="order-3 w-full min-w-0 sm:order-none sm:w-auto sm:max-w-3xl sm:flex-1">
             <SearchForm
               compact
               defaultValue={query.q}
@@ -188,7 +188,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
         </div>
       </header>
 
-      <main className="mx-auto w-full max-w-5xl flex-1 px-5 py-7 sm:px-8">
+      <main className="w-full flex-1 px-4 py-7 sm:px-6 lg:px-10 xl:px-14">
         <nav aria-label="Result views" className="flex gap-7 border-b border-line">
           {resultTabs.map(({ key, label, Icon }) => {
             const active = query.tab === key;
@@ -211,7 +211,9 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
 
         <div
           className={`mt-7 grid gap-10 ${
-            hasFacets ? "lg:grid-cols-[210px_minmax(0,1fr)] lg:gap-14" : ""
+            hasFacets
+              ? "lg:grid-cols-[220px_minmax(0,1fr)] lg:gap-10 xl:grid-cols-[240px_minmax(0,1fr)] xl:gap-14"
+              : ""
           }`}
         >
           {hasFacets ? (
@@ -337,7 +339,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
         </div>
       </main>
 
-      <footer className="mx-auto flex w-full max-w-5xl items-center justify-between gap-6 border-t border-line px-5 py-6 text-[11px] text-muted sm:px-8">
+      <footer className="flex w-full items-center justify-between gap-6 border-t border-line px-4 py-6 text-[11px] text-muted sm:px-6 lg:px-10 xl:px-14">
         <span>
           {facetPanels.source === "api" ? "Live API." : "API unreachable — showing mock records."}
         </span>

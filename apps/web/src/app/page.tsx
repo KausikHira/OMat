@@ -11,11 +11,11 @@ const examples = ["I want to make a house near a riverbed — which type of conc
 export default function HomePage() {
   return (
     <div className="flex min-h-svh flex-col">
-      <header className="flex items-center justify-end px-5 py-5 sm:px-8">
+      <header className="flex items-center justify-end px-4 py-5 sm:px-6 lg:px-10 xl:px-14">
         <ThemeToggle />
       </header>
 
-      <main className="flex flex-1 flex-col items-center justify-center px-5 pb-20 pt-6">
+      <main className="flex flex-1 flex-col items-center justify-center px-4 pb-20 pt-6 sm:px-6 lg:px-10 xl:px-14">
         <div className="w-full max-w-[44rem]">
           <div className="flex flex-col items-center text-center">
             <Wordmark size="lg" />
@@ -55,7 +55,7 @@ export default function HomePage() {
         </div>
       </main>
 
-      <footer className="flex items-center px-5 py-6 text-[11px] text-muted sm:px-8">
+      <footer className="flex items-center px-4 py-6 text-[11px] text-muted sm:px-6 lg:px-10 xl:px-14">
         <a
           href="https://github.com/Jayesh-Dev21/Omat-se"
           target="_blank"

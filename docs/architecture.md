@@ -32,7 +32,7 @@ Ingest: CSV → validate/normalize → JSONL → bulk index → smoke test → a
 | `apps/api` | HTTP validation, auth, caching, response shaping | `/v1/search`, `/facets`, `/suggest`, `/papers`, `/aggregates`, `/literature`, `/chat` live; auth/rate limits pending |
 | `packages/py-core` | Models, cleaning, taxonomy, query DSL, GSC chart math | Implemented (see [search.md](search.md)); text enrichment pending |
 | `packages/py-ingest` | CSV → validated records → index | CLI implemented |
-| `apps/mcp` | Agent-facing tools | `search_records`, `get_paper`, `facet_counts`, literature tools live |
+| `apps/mcp` | Agent-facing tools | `search_records` (with filters), `get_paper`, `facet_counts` (with filters), `suggest`, `props_scatter`, `gsc_chart`, literature tools live |
 | `apps/workers` | Async consumers | Idle entry point (phase 2) |
 | `docs/api` | Static Scalar reference generated from FastAPI | Shell page + Pages workflow |
 | `infra` | Local compose, Terraform skeleton | Compose stack |

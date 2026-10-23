@@ -58,6 +58,16 @@ ps:
 web-install:
     bun install
 
+# Stop the web dev server, wipe the Next.js dev cache, restart clean.
+# Run this after bun add/remove or when pages 500 with
+# "Cannot find module './NNN.js'" in the dev log.
+web-fresh:
+    pkill -f "next dev" || true
+    pkill -f "next-server" || true
+    sleep 1
+    rm -rf apps/web/.next
+    just web-dev
+
 web-dev:
     bun run dev
 

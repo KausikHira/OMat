@@ -15,6 +15,8 @@ from typing import Any
 from ..query_interpret import interpret_query
 from .client import bulk_index, count_all, ensure_index, make_client
 from .mapping import ALIAS, INDEX_VERSION, index_name, papers_mapping
+from .scan import fetch_property_rows
+from .suggest import build_suggest_body, reduce_suggest_response
 
 __all__ = [
     "ALIAS",
@@ -29,6 +31,9 @@ __all__ = [
     "FACET_AGGS",
     "search_after_cursor",
     "parse_cursor",
+    "fetch_property_rows",
+    "build_suggest_body",
+    "reduce_suggest_response",
 ]
 
 

@@ -21,7 +21,9 @@ is absent, and `Applications` is stored as `APL_Group`.
 | `Date` | Year | Integer, no month/day |
 
 Derived fields: `paper_link` (`https://doi.org/<doi>`), canonical formula, at%
-amounts, element vector, and `search_text`.
+amounts, element vector, and `search_text`. The CSV also carries a `Title`
+column (paper titles mapped from Crossref by PII) that the ingest pipeline
+indexes into the `title` field; rows without a title index `null`.
 
 ## Canonical document
 
@@ -84,9 +86,11 @@ amounts, element vector, and `search_text`.
 | `search_text` | text | Catch-all BM25 field |
 | `title`, `abstract` | text | Enrichment fields used by paper listings |
 
-`title` and `abstract` are optional enrichment fields. The CSV pipeline leaves
-them empty; a later enrichment pass may populate them. The web app falls back to
-measurement-derived labels when they are absent.
+`title` is populated by the ingest pipeline from the CSV's `Title` column
+(Crossref titles mapped by PII). `abstract` is still an optional enrichment
+field left empty by the CSV pipeline; a later enrichment pass may populate it.
+The web app falls back to a "Paywalled source" label when a record has no
+title.
 
 ## Query interpretation
 

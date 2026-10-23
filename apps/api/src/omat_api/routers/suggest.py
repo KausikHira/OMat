@@ -14,7 +14,7 @@ from fastapi import APIRouter, Depends, Query
 from opensearchpy import AsyncOpenSearch
 from redis.asyncio import Redis
 
-from omat_core.opensearch import ALIAS
+from omat_core.opensearch import ALIAS, build_suggest_body, reduce_suggest_response
 
 from ..cache import cache_get, cache_set
 from ..deps import get_opensearch, get_redis
@@ -35,40 +35,11 @@ async def suggest(
     if cached:
         return json.loads(cached)
 
-    body = {
-        "size": 0,
-        "query": {
-            "bool": {
-                "minimum_should_match": 1,
-                "should": [
-                    {
-                        "match_bool_prefix": {
-                            "composition.canonical": {"query": q, "_name": "formula"},
-                        }
-                    },
-                    {"prefix": {"elements": {"value": q.upper(), "_name": "element"}}},
-                    {"match_bool_prefix": {"property.name": {"query": q, "_name": "property"}}},
-                    {"match_bool_prefix": {"journal.name": {"query": q, "_name": "journal"}}},
-                ],
-            }
-        },
-        "aggs": {
-            "formulas": {"terms": {"field": "composition.canonical", "size": limit}},
-            "elements": {"terms": {"field": "elements", "size": limit}},
-            "properties": {"terms": {"field": "property.slug", "size": limit}},
-            "journals": {"terms": {"field": "journal.slug", "size": limit}},
-        },
-    }
+    body = build_suggest_body(q, limit)
     try:
         response = await client.search(index=ALIAS, body=body)
     except Exception as exc:
         raise SearchBackendUnavailable(f"opensearch unreachable: {exc}") from exc
-    result = {
-        "query": q,
-        "formulas": [b["key"] for b in response["aggregations"]["formulas"]["buckets"]],
-        "elements": [b["key"] for b in response["aggregations"]["elements"]["buckets"]],
-        "properties": [b["key"] for b in response["aggregations"]["properties"]["buckets"]],
-        "journals": [b["key"] for b in response["aggregations"]["journals"]["buckets"]],
-    }
+    result = reduce_suggest_response(q, response)
     await cache_set(redis, cache_key, json.dumps(result), 300)
     return result

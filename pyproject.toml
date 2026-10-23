@@ -6,7 +6,7 @@ line-length = 100
 target-version = "py311"
 src = ["apps", "packages"]
 # The GSC notebook under apps/web/analysis is a research artifact, not
-# application code.
+# application code, and must not gate CI.
 extend-exclude = ["apps/web/analysis"]
 
 [tool.ruff.lint]

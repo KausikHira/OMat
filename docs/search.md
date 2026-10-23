@@ -59,9 +59,22 @@ changes nothing and fires no facets.
 | `POST /v1/papers/{id_or_doi}/chat` | Per-paper Gemini chat over SSE; context is that paper's records |
 | `GET /healthz` | Liveness |
 
-The MCP server (`apps/mcp`) exposes the same semantics as tools
-(`search_records`, `get_paper`, `facet_counts`, …) by importing the same
-py-core builders, so an agent search and a UI search cannot drift.
+The MCP server (`apps/mcp`) exposes the same semantics as tools by importing
+the same py-core builders, so an agent search and a UI search cannot drift:
+
+| Tool | Mirrors |
+| --- | --- |
+| `search_records` (with `journal`/`applications` filters) | `GET /v1/search` |
+| `get_paper` | `GET /v1/papers/{id}` |
+| `facet_counts` (with query + filters) | `GET /v1/facets` |
+| `suggest` | `GET /v1/suggest` |
+| `props_scatter` (three-property notebook chart with criteria) | `GET /v1/aggregates?kind=props_scatter` |
+| `gsc_chart` (composition-family hulls) | `GET /v1/aggregates?kind=gsc` |
+| `search_literature`, `literature_trends` | `GET /v1/literature` (Valency) |
+
+The bounded `search_after` scans behind `props_scatter`/`gsc_chart` share the
+hit-reduction function with the API (`omat_core.gsc.gsc_row_from_source`), so
+both surfaces reduce documents identically.
 
 ## Response envelope and caching
 

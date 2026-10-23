@@ -11,7 +11,7 @@ from typing import Any
 
 from opensearchpy import AsyncOpenSearch
 
-from omat_core.gsc import GscRow
+from omat_core.gsc import GscRow, gsc_row_from_source
 from omat_core.opensearch import (
     ALIAS,
     FACET_AGGS,
@@ -174,25 +174,24 @@ async def facet_counts(
     return facets
 
 
-async def fetch_gsc_rows(
+async def fetch_property_rows(
     client: AsyncOpenSearch,
     *,
     filters: dict[str, list[str]],
-    property_a: str,
-    property_b: str,
+    property_slugs: list[str],
     max_docs: int = 4000,
 ) -> list[GscRow]:
-    """Bounded search_after scan of the docs measuring either property.
+    """Bounded search_after scan of the docs measuring any of the slugs.
 
-    GSC pairs measurements of the same material across property documents,
-    which no single OpenSearch aggregation can do; the API scans a capped
-    window (sorted by record_id, never from/size) and hands the rows to
-    ``omat_core.gsc.build_gsc`` for the actual chart math.
+    The scatter/correlation charts join measurements of the same material
+    across property documents, which no single OpenSearch aggregation can do;
+    the API scans a capped window (sorted by record_id, never from/size) and
+    hands the rows to py-core for the actual chart math.
     """
     query = build_search_query(None, filters)
     query["bool"]["filter"].extend(
         [
-            {"terms": {"property.slug": [property_a, property_b]}},
+            {"terms": {"property.slug": property_slugs}},
             {"term": {"has_property": True}},
             {"term": {"has_composition": True}},
         ]
@@ -224,23 +223,28 @@ async def fetch_gsc_rows(
             raise SearchBackendUnavailable(f"opensearch unreachable: {exc}") from exc
         hits = response["hits"]["hits"]
         for hit in hits:
-            source = hit["_source"]
-            composition = source.get("composition") or {}
-            rows.append(
-                GscRow(
-                    article_pii=source.get("article_pii") or "",
-                    canonical=composition.get("canonical") or composition.get("label") or "",
-                    elements=tuple(source.get("elements") or []),
-                    slug=(source.get("property") or {}).get("slug") or "",
-                    name=(source.get("property") or {}).get("name") or "",
-                    value=float((source.get("property") or {}).get("value") or 0.0),
-                    unit=(source.get("property") or {}).get("unit") or "",
-                )
-            )
+            rows.append(gsc_row_from_source(hit["_source"]))
         if len(hits) < page:
             break
         search_after = hits[-1]["sort"]
     return rows
+
+
+async def fetch_gsc_rows(
+    client: AsyncOpenSearch,
+    *,
+    filters: dict[str, list[str]],
+    property_a: str,
+    property_b: str,
+    max_docs: int = 4000,
+) -> list[GscRow]:
+    """Two-property variant of ``fetch_property_rows`` for the GSC chart."""
+    return await fetch_property_rows(
+        client,
+        filters=filters,
+        property_slugs=[property_a, property_b],
+        max_docs=max_docs,
+    )
 
 
 async def get_paper(

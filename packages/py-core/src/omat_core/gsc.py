@@ -42,6 +42,25 @@ def family_name(elements: Iterable[str]) -> str:
     return str(sorted({element for element in elements if element}))
 
 
+def gsc_row_from_source(source: dict[str, Any]) -> GscRow:
+    """One OpenSearch hit's ``_source`` -> GscRow.
+
+    Shared by the API's async scan and the MCP server's sync scan so both
+    surfaces reduce documents identically.
+    """
+    composition = source.get("composition") or {}
+    prop = source.get("property") or {}
+    return GscRow(
+        article_pii=source.get("article_pii") or "",
+        canonical=composition.get("canonical") or composition.get("label") or "",
+        elements=tuple(source.get("elements") or []),
+        slug=prop.get("slug") or "",
+        name=prop.get("name") or "",
+        value=float(prop.get("value") or 0.0),
+        unit=prop.get("unit") or "",
+    )
+
+
 def convex_hull(points: Sequence[Point]) -> list[Point]:
     """Andrew monotone chain. Returns hull vertices in CCW order (open loop)."""
     if len(points) < 3:

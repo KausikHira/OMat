@@ -7,7 +7,11 @@ from typing import Any
 
 from ..models import SCHEMA_VERSION
 
-INDEX_VERSION = SCHEMA_VERSION  # bumps to "2" on the next mapping change
+# v2 = documents now carry `title` from the CSV's Title column. The mapping
+# body below is unchanged from v1 (title/abstract were declared up front);
+# the version bump forces a fresh papers_v2 + alias swap, keeping papers_v1
+# as a rollback.
+INDEX_VERSION = SCHEMA_VERSION
 ALIAS = "papers"
 
 

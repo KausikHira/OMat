@@ -8,9 +8,15 @@ import { PlotsView } from "@/components/plots-view";
 import { SearchForm } from "@/components/search-form";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Wordmark } from "@/components/wordmark";
-import { fetchFacetPanels, fetchGscChart, fetchMeasurements } from "@/lib/api";
+import {
+  fetchFacetPanels,
+  fetchMeasurements,
+  fetchPropsScatterChart,
+  prettifySlug,
+} from "@/lib/api";
 import { type PairOption, pairableProperties } from "@/lib/gsc";
 import { groupMeasurementsByPaper, paginatePapers } from "@/lib/papers";
+import { NOTEBOOK_DEFAULT_PROPERTIES, NOTEBOOK_DEFAULT_THRESHOLDS } from "@/lib/props-scatter";
 import type { SearchState, SortKey } from "@/lib/search";
 import { buildSearchHref, parseSearchParams } from "@/lib/search";
 
@@ -22,44 +28,93 @@ type SearchPageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
 
-const GSC_SLUG_PATTERN = /^[a-z0-9_-]+$/;
+const PLOT_SLUG_PATTERN = /^[a-z0-9_-]+$/;
 
-function gscSlug(
+function plotSlug(
   params: Record<string, string | string[] | undefined>,
   key: string,
 ): string | undefined {
   const value = Array.isArray(params[key]) ? params[key]?.[0] : params[key];
-  return value && GSC_SLUG_PATTERN.test(value) ? value : undefined;
+  return value && PLOT_SLUG_PATTERN.test(value) ? value : undefined;
 }
 
-type GscPair = { a: string; b: string };
+function plotThreshold(
+  params: Record<string, string | string[] | undefined>,
+  key: string,
+): number | undefined {
+  const value = Array.isArray(params[key]) ? params[key]?.[0] : params[key];
+  const parsed = Number(value);
+  return value !== undefined && value !== "" && Number.isFinite(parsed) ? parsed : undefined;
+}
 
-function parseGscPair(params: Record<string, string | string[] | undefined>): {
-  a?: string;
-  b?: string;
-} {
-  return { a: gscSlug(params, "gscA"), b: gscSlug(params, "gscB") };
+type PlotTriple = { a: string; b: string; c: string };
+
+/**
+ * Notebook defaults first: with no URL parameters the plot reproduces the
+ * plot_3_props_ultimate_with_filtering notebook's active criteria set —
+ * glass transition temperature / activation energy / crystallization
+ * temperature ringed at 600 K / 2 eV / 800 K. The aggregate endpoint scans
+ * the whole corpus (not just the current results page), so the notebook
+ * trio is plottable even when the visible page shows other materials; the
+ * search-results trio is only a fallback when the notebook trio has no
+ * data at all.
+ */
+function notebookTriple(): PlotTriple {
+  const [a, b, c] = NOTEBOOK_DEFAULT_PROPERTIES;
+  return { a, b, c };
+}
+
+function isNotebookTriple(triple: PlotTriple): boolean {
+  const [a, b, c] = NOTEBOOK_DEFAULT_PROPERTIES;
+  return triple.a === a && triple.b === b && triple.c === c;
+}
+
+function topOptionsTriple(options: PairOption[]): PlotTriple {
+  return {
+    a: options[0]?.slug ?? "hardness",
+    b: options[1]?.slug ?? "density",
+    c: options[2]?.slug ?? "youngs_modulus",
+  };
+}
+
+function resolvePlotTriple(requested: { a?: string; b?: string; c?: string }): PlotTriple {
+  const a = requested.a ?? NOTEBOOK_DEFAULT_PROPERTIES[0];
+  const b = requested.b ?? NOTEBOOK_DEFAULT_PROPERTIES[1];
+  const c = requested.c ?? NOTEBOOK_DEFAULT_PROPERTIES[2];
+  if (new Set([a, b, c]).size === 3) {
+    return { a, b, c };
+  }
+  return notebookTriple();
 }
 
 /**
- * Plot the properties this search is actually about: when the URL does not
- * pin a pair, the axes default to the most-measured pairable properties in
- * the current result set (e.g. a conductivity search plots conductivity, not
- * the notebook's hardness/density stand-ins).
+ * The property selects must list whatever is plotted. The notebook trio is
+ * plottable corpus-wide, so it is merged into the result-page-derived
+ * options even when the current page's materials don't measure it.
  */
-function resolveGscPair(requested: { a?: string; b?: string }, options: PairOption[]): GscPair {
-  const preferred = [options[0]?.slug, options[1]?.slug, "hardness", "density"].filter(
-    (slug): slug is string => Boolean(slug),
-  );
-  const a = requested.a ?? preferred[0] ?? "hardness";
-  const b = requested.b ?? preferred.find((slug) => slug !== a) ?? "density";
-  if (a === b) {
-    const alternative = preferred.find((slug) => slug !== a);
-    if (alternative) {
-      return { a, b: alternative };
+function withNotebookOptions(options: PairOption[]): PairOption[] {
+  const bySlug = new Map(options.map((option) => [option.slug, option]));
+  for (const slug of NOTEBOOK_DEFAULT_PROPERTIES) {
+    if (!bySlug.has(slug)) {
+      bySlug.set(slug, { slug, label: prettifySlug(slug), count: 0 });
     }
   }
-  return { a, b };
+  return [...bySlug.values()];
+}
+
+/**
+ * Criteria are all-or-nothing (the notebook's criteria sets always specify
+ * all three thresholds); partial input is ignored. The notebook's criteria-8
+ * values apply automatically when the notebook triple is selected.
+ */
+function resolveThresholds(
+  requested: { a?: number; b?: number; c?: number },
+  triple: PlotTriple,
+): [number, number, number] | null {
+  if (requested.a !== undefined && requested.b !== undefined && requested.c !== undefined) {
+    return [requested.a, requested.b, requested.c];
+  }
+  return isNotebookTriple(triple) ? NOTEBOOK_DEFAULT_THRESHOLDS : null;
 }
 
 const resultTabs = [
@@ -123,7 +178,16 @@ function Pagination({ query, page, totalPages, start, end, total }: PaginationPr
 export default async function SearchPage({ searchParams }: SearchPageProps) {
   const rawParams = await searchParams;
   const query: SearchState = parseSearchParams(rawParams);
-  const requestedPair = parseGscPair(rawParams);
+  const requestedTriple = {
+    a: plotSlug(rawParams, "propX"),
+    b: plotSlug(rawParams, "propY"),
+    c: plotSlug(rawParams, "propZ"),
+  };
+  const requestedThresholds = {
+    a: plotThreshold(rawParams, "thX"),
+    b: plotThreshold(rawParams, "thY"),
+    c: plotThreshold(rawParams, "thZ"),
+  };
 
   // The search endpoint is measurement-level. Group its page of records into
   // papers for display; paper-level pagination can move server-side when the
@@ -132,11 +196,24 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
     fetchMeasurements(query),
     fetchFacetPanels(query),
   ]);
-  const gscOptions = pairableProperties(results);
-  const gscPair = resolveGscPair(requestedPair, gscOptions);
-  // The GSC chart is only fetched on the Plots tab, from the aggregate
-  // endpoint (never from the raw result set in the browser).
-  const gsc = query.tab === "plots" ? await fetchGscChart(query, gscPair) : null;
+  const rawOptions = pairableProperties(results);
+  const plotOptions = withNotebookOptions(rawOptions);
+  const explicitTriple = Boolean(requestedTriple.a || requestedTriple.b || requestedTriple.c);
+  const plotTriple = resolvePlotTriple(requestedTriple);
+  const plotThresholds = resolveThresholds(requestedThresholds, plotTriple);
+  // The three-property scatter is only fetched on the Plots tab, from the
+  // aggregate endpoint (never from the raw result set in the browser).
+  let propsScatter =
+    query.tab === "plots" ? await fetchPropsScatterChart(query, plotTriple, plotThresholds) : null;
+  // Notebook trio with no data on this corpus (rare): fall back to the
+  // search's own most-measured properties rather than an empty frame.
+  let effectiveTriple = plotTriple;
+  let effectiveThresholds = plotThresholds;
+  if (propsScatter && propsScatter.chart.counts.merged === 0 && !explicitTriple) {
+    effectiveTriple = topOptionsTriple(rawOptions);
+    effectiveThresholds = resolveThresholds(requestedThresholds, effectiveTriple);
+    propsScatter = await fetchPropsScatterChart(query, effectiveTriple, effectiveThresholds);
+  }
   const papers = groupMeasurementsByPaper(results);
   const paperPage = paginatePapers(papers, query.page);
   const facets = facetPanels.facets;
@@ -274,14 +351,15 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
               </details>
             ) : null}
 
-            {query.tab === "plots" && gsc ? (
+            {query.tab === "plots" && propsScatter ? (
               <PlotsView
                 papers={papers}
-                gsc={{
+                propsScatter={{
                   query,
-                  pair: gscPair,
-                  options: gscOptions,
-                  chart: gsc.chart,
+                  triple: effectiveTriple,
+                  thresholds: effectiveThresholds,
+                  options: plotOptions,
+                  chart: propsScatter.chart,
                 }}
               />
             ) : query.tab === "all" ? (

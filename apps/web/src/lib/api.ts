@@ -4,17 +4,18 @@
 // only as a dev fallback when the API is unreachable, so the UI works with or
 // without OpenSearch running.
 
-import type { ApiFacetBucket, ApiRecord, GscResponse } from "@omat/api-client";
+import type { ApiFacetBucket, ApiRecord } from "@omat/api-client";
 import {
   type FacetsResponse,
   type SearchParams,
   fetchFacets,
-  fetchGsc,
+  fetchPropsScatter,
   searchRecords,
 } from "@omat/api-client";
 
-import { type GscAxis, type GscChart, type GscFamily, buildGscChart } from "@/lib/gsc";
+import type { GscAxis } from "@/lib/gsc";
 import { MEASUREMENTS, type Measurement } from "@/lib/mock-records";
+import { type PropsPoint, type PropsScatterChart, buildPropsScatter } from "@/lib/props-scatter";
 import { type Facets, type SearchState, getFacets, searchMeasurements } from "@/lib/search";
 
 // ---- Sort mapping: web keys -> API keys --------------------------------------
@@ -32,7 +33,7 @@ export type SearchResult = {
   source: "api" | "mock";
 };
 
-function prettifySlug(slug: string): string {
+export function prettifySlug(slug: string): string {
   return slug
     .split(/[-_]/)
     .map((word) =>
@@ -146,9 +147,12 @@ export async function fetchFacetPanels(
   }
 }
 
-// ---- GSC chart: API aggregate -> web chart shape --------------------------------
+// ---- Props scatter chart: API aggregate -> web chart shape ---------------------
 
-function toAxis(axis: GscResponse["property_a"], fallbackSlug: string): GscAxis {
+function toAxis(
+  axis: { slug?: string; name?: string; unit?: string } | null | undefined,
+  fallbackSlug: string,
+): GscAxis {
   return {
     slug: axis?.slug ?? fallbackSlug,
     name: axis?.name ?? fallbackSlug,
@@ -156,38 +160,60 @@ function toAxis(axis: GscResponse["property_a"], fallbackSlug: string): GscAxis 
   };
 }
 
-export async function fetchGscChart(
+export async function fetchPropsScatterChart(
   state: SearchState,
-  pair: { a: string; b: string },
-): Promise<{ chart: GscChart; source: "api" | "mock" }> {
+  triple: { a: string; b: string; c: string },
+  thresholds: [number, number, number] | null,
+): Promise<{ chart: PropsScatterChart; source: "api" | "mock" }> {
   const params = {
-    property_a: pair.a,
-    property_b: pair.b,
+    property_a: triple.a,
+    property_b: triple.b,
+    property_c: triple.c,
+    ...(thresholds
+      ? { threshold_a: thresholds[0], threshold_b: thresholds[1], threshold_c: thresholds[2] }
+      : {}),
     elements: state.elements,
     journal: state.journal ? [state.journal] : undefined,
     app: state.applications,
   };
 
   try {
-    const response = await fetchGsc(params);
-    const families: GscFamily[] = (response.families ?? []).map((family) => ({
-      family: family.family ?? "[]",
-      count: family.count ?? 0,
-      points: family.points ?? [],
-      hull: family.hull ?? [],
+    const response = await fetchPropsScatter(params);
+    // The API sends [x, y, z, flag] tuples; the chart consumes objects.
+    const points: PropsPoint[] = (response.points ?? []).map((tuple) => ({
+      x: tuple[0] ?? 0,
+      y: tuple[1] ?? 0,
+      z: tuple[2] ?? 0,
+      highlighted: (tuple[3] ?? 0) === 1,
     }));
+    const bounds = response.bounds ?? { a: [0, 0], b: [0, 0], c: [0, 0] };
     return {
       chart: {
-        propertyA: toAxis(response.property_a, pair.a),
-        propertyB: toAxis(response.property_b, pair.b),
-        families,
-        totalPoints: response.total_points ?? 0,
+        propertyA: toAxis(response.property_a, triple.a),
+        propertyB: toAxis(response.property_b, triple.b),
+        propertyC: toAxis(response.property_c, triple.c),
+        thresholds: response.thresholds
+          ? [response.thresholds[0] ?? 0, response.thresholds[1] ?? 0, response.thresholds[2] ?? 0]
+          : null,
+        points,
+        bounds: {
+          a: [bounds.a[0] ?? 0, bounds.a[1] ?? 0],
+          b: [bounds.b[0] ?? 0, bounds.b[1] ?? 0],
+          c: [bounds.c[0] ?? 0, bounds.c[1] ?? 0],
+        },
+        counts: response.counts ?? { merged: 0, plotted: 0, highlighted: 0 },
       },
       source: "api",
     };
   } catch {
     // Dev fallback: same chart math over the mock records.
-    const chart = buildGscChart(searchMeasurements(MEASUREMENTS, state), pair.a, pair.b);
+    const chart = buildPropsScatter(
+      searchMeasurements(MEASUREMENTS, state),
+      triple.a,
+      triple.b,
+      triple.c,
+      thresholds,
+    );
     return { chart, source: "mock" };
   }
 }

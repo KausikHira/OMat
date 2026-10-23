@@ -51,10 +51,12 @@ changes nothing and fires no facets.
 | `GET /v1/search` | One page of measurement records (`q`, filters, `sort`, `cursor`, `limit` ≤ 100) |
 | `GET /v1/facets` | Aggregation-only counts for the facet rail |
 | `GET /v1/suggest` | Prefix autocomplete (compositions, elements, properties, journals) |
-| `GET /v1/papers/{id}` | All records for one paper (DOI or PII) |
+| `GET /v1/papers/{id_or_doi}` | All records for one paper (DOI or PII) |
 | `GET /v1/aggregates` | Chart data (see [plots.md](plots.md)) |
-| `GET /v1/literature` | External semantic search over arXiv (Valency) — separate corpus |
-| `POST /v1/chat` | Per-paper Gemini chat, SSE streaming; context is the paper's records |
+| `GET /v1/literature/search` | External semantic search over arXiv (Valency) — separate corpus (`q`, `limit`) |
+| `GET /v1/literature/trends` | Keyword publication trends via Valency (`keyword`, optional `category`) |
+| `GET /v1/literature/related` | Related preprints from semantic + title matches (`q`, `limit`) |
+| `POST /v1/papers/{id_or_doi}/chat` | Per-paper Gemini chat over SSE; context is that paper's records |
 | `GET /healthz` | Liveness |
 
 The MCP server (`apps/mcp`) exposes the same semantics as tools

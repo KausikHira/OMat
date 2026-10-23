@@ -4,7 +4,8 @@ Faceted search over materials composition and property measurements.
 
 Live
   Frontend       https://omat-se.vercel.app
-  API reference  https://jayesh-dev21.github.io/Omat-se/
+  API reference  https://jayesh-dev21.github.io/Omat-se/api/
+  MCP reference  https://jayesh-dev21.github.io/Omat-se/mcp/
 
 Repository
   apps/api       FastAPI service
@@ -14,7 +15,7 @@ Repository
   packages/      Shared Python domain, ingestion CLI, typed TypeScript client
   data/          Source CSV, taxonomy, synonyms, staging
   infra/         Terraform and container placeholders
-  docs/          Architecture, schema, ADRs, API reference
+  docs/          Architecture, schema, ADRs, API + MCP reference
   report/        LaTeX write-up
 
 Local setup
@@ -25,7 +26,7 @@ Local setup
   just dev-api
   bun install
   just web-dev
-  just docs      # local API reference on http://localhost:8080
+  just docs      # local docs on http://localhost:8080
 
 Requirements: Python 3.11+, Bun, Docker.
 Architecture: docs/architecture.md
@@ -41,8 +42,9 @@ Deploy
     Git integration or `.github/workflows/deploy-web.yml` (add VERCEL_TOKEN,
     VERCEL_ORG_ID, and VERCEL_PROJECT_ID), not both.
 
-  API reference
+  API + MCP reference
     `.github/workflows/docs.yml` generates `openapi.json` from FastAPI and
-    publishes the Scalar shell in `docs/api` to GitHub Pages. Enable
-    Settings -> Pages -> Source: GitHub Actions once, then push to `master`
-    or run the workflow manually.
+    publishes the site in `docs/` to GitHub Pages: `/` is the landing page,
+    `/api/` is the Scalar reference, and `/mcp/` documents the MCP tools.
+    Enable Settings -> Pages -> Source: GitHub Actions once, then push to
+    `master` or run the workflow manually.

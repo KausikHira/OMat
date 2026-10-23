@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>OMAT-SE developer docs</title>
+    <link rel="icon" type="image/svg+xml" href="./api/favicon.svg" />
+    <link rel="stylesheet" href="./site.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="./">OMAT-SE</a>
+      <nav class="site-nav" aria-label="Documentation">
+        <a href="./api/">API reference</a>
+        <a href="./mcp/">MCP server</a>
+        <a href="https://omat-se.vercel.app">App &#8599;</a>
+      </nav>
+    </header>
+
+    <main>
+      <div class="hero">
+        <h1>Developer documentation</h1>
+        <p class="lede">
+          Faceted search over materials composition and property measurements. One
+          OpenSearch document per measured property, grouped by paper for display.
+        </p>
+      </div>
+
+      <div class="cards">
+        <a class="card" href="./api/">
+          <h2>API reference</h2>
+          <p>
+            REST endpoints for search, facets, papers, aggregates, literature, and
+            per-paper chat. Interactive Scalar reference generated from the FastAPI
+            schema.
+          </p>
+          <span class="more">Open API reference &rarr;</span>
+        </a>
+
+        <a class="card" href="./mcp/">
+          <h2>MCP server</h2>
+          <p>
+            Agent-facing tools for records, papers, facets, suggestions, property
+            charts, and literature. Same <code>py-core</code> query semantics as the
+            REST API.
+          </p>
+          <span class="more">Open MCP docs &rarr;</span>
+        </a>
+      </div>
+
+      <section>
+        <h2>Local preview</h2>
+        <pre><code>just install
+just docs   # http://localhost:8080</code></pre>
+        <p class="muted">
+          The reference reads the OpenAPI schema generated from FastAPI, so the API
+          does not need to be running to browse it. To exercise requests, start the
+          stack and load the index first:
+        </p>
+        <pre><code>just up
+just index data/final_data.csv
+just dev-api</code></pre>
+      </section>
+
+      <section>
+        <h2>Published from the repository</h2>
+        <p>
+          <code>.github/workflows/docs.yml</code> generates the schema and publishes
+          this site to GitHub Pages on every push that touches the API, MCP server,
+          or docs sources.
+        </p>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <span>OMAT-SE</span>
+      <span>
+        <a href="https://github.com/Jayesh-Dev21/Omat-se">Source on GitHub &#8599;</a>
+      </span>
+    </footer>
+  </body>
+</html>

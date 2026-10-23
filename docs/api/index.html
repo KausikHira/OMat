@@ -12,34 +12,44 @@
         display: none !important;
       }
 
-      /* Link back to the app, in the space the Scalar credit used to occupy. */
-      #home-link {
+      /* Links back to the docs home, MCP reference, and app. */
+      #docs-links {
         position: fixed;
         bottom: 14px;
         left: 14px;
         z-index: 100;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 14px;
         font: 500 13px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif;
+      }
+
+      #docs-links a {
         color: var(--scalar-color-2, #6b7280);
         text-decoration: none;
         opacity: 0.75;
       }
 
-      #home-link:hover,
-      #home-link:focus-visible {
+      #docs-links a:hover,
+      #docs-links a:focus-visible {
         opacity: 1;
         text-decoration: underline;
       }
 
-      /* On narrow screens the sidebar collapses and the link would cover content. */
+      /* On narrow screens the sidebar collapses and the links would cover content. */
       @media (max-width: 767px) {
-        #home-link {
+        #docs-links {
           display: none;
         }
       }
     </style>
   </head>
   <body>
-    <a id="home-link" href="https://omat-se.vercel.app">OMAT-SE &#8599;</a>
+    <nav id="docs-links" aria-label="Documentation">
+      <a href="../">Docs</a>
+      <a href="../mcp/">MCP</a>
+      <a href="https://omat-se.vercel.app">App &#8599;</a>
+    </nav>
     <div id="app"></div>
     <script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference"></script>
     <script>

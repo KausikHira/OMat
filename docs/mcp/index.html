@@ -1,0 +1,319 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>OMAT-SE MCP server</title>
+    <link rel="icon" type="image/svg+xml" href="../api/favicon.svg" />
+    <link rel="stylesheet" href="../site.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="../">OMAT-SE</a>
+      <nav class="site-nav" aria-label="Documentation">
+        <a href="../api/">API reference</a>
+        <a href="../mcp/" aria-current="page">MCP server</a>
+        <a href="https://omat-se.vercel.app">App &#8599;</a>
+      </nav>
+    </header>
+
+    <main>
+      <div class="hero">
+        <h1>MCP server</h1>
+        <p class="lede">
+          Agent-facing tools over the measurement corpus. Every tool delegates to the
+          same <code>py-core</code> builders as the REST API, so an agent search and a
+          UI search cannot drift.
+        </p>
+      </div>
+
+      <section>
+        <h2>Run it</h2>
+        <pre><code>just dev-mcp
+# or
+.venv/bin/python -m omat_mcp.server</code></pre>
+        <p>
+          The entry point speaks <strong>stdio</strong>. The Python SDK also supports
+          streamable HTTP for a future ALB deployment; no public MCP endpoint is
+          deployed yet.
+        </p>
+        <p>
+          Tools read OpenSearch directly, so start the stack and load the index before
+          connecting a client:
+        </p>
+        <pre><code>just up
+just index data/final_data.csv</code></pre>
+      </section>
+
+      <section>
+        <h2>Connect a client</h2>
+        <p>
+          Point any stdio MCP client at the workspace virtualenv. Replace the command
+          path with your checkout:
+        </p>
+        <pre><code>{
+  "mcpServers": {
+    "omat-se": {
+      "command": "/absolute/path/to/Omat-se/.venv/bin/python",
+      "args": ["-m", "omat_mcp.server"],
+      "env": {
+        "OMAT_OPENSEARCH_URL": "http://localhost:9200"
+      }
+    }
+  }
+}</code></pre>
+        <p class="muted">
+          The literature tools additionally need <code>OMAT_VALENCY_BEARER_TOKEN</code>.
+          Without it they return <code>{"available": false}</code> instead of failing.
+        </p>
+      </section>
+
+      <section id="tools">
+        <h2>Tools</h2>
+
+        <article class="tool">
+          <div class="tool-head">
+            <h3><code>search_records</code></h3>
+            <span class="tag">search</span>
+          </div>
+          <p class="sig"><code>search_records(query="", elements=None, property_slug=None, min_value=None, max_value=None, journal=None, applications=None, limit=10)</code></p>
+          <p>
+            Search measurement records by free text, composition, property, journal, or
+            application. Natural-language questions are mapped to application and
+            property boosts by <code>py-core</code> before the query runs. Filters are
+            OR within a field and AND across fields.
+          </p>
+          <p class="returns">
+            <strong>Returns:</strong> a list of records with <code>record_id</code>,
+            <code>article_pii</code>, <code>doi</code>, <code>composition</code>,
+            <code>property</code>, <code>elements</code>, <code>journal</code>,
+            <code>year</code>, <code>applications</code>, and <code>title</code>.
+            <code>limit</code> is clamped to 1&ndash;50.
+          </p>
+          <p class="example">
+            <strong>Example:</strong>
+            <code>search_records(query="TiAlN coating", elements=["Ti", "Al"], limit=5)</code>
+          </p>
+        </article>
+
+        <article class="tool">
+          <div class="tool-head">
+            <h3><code>get_paper</code></h3>
+            <span class="tag">papers</span>
+          </div>
+          <p class="sig"><code>get_paper(doi_or_pii)</code></p>
+          <p>
+            Return every measurement row for one paper. Values starting with
+            <code>10.</code> are treated as a DOI (lowercased); anything else is treated
+            as an article PII (uppercased).
+          </p>
+          <p class="returns">
+            <strong>Returns:</strong> <code>{doi, article_pii, title, record_count, records}</code>,
+            or <code>{"error": "paper not found"}</code>.
+          </p>
+          <p class="example">
+            <strong>Example:</strong>
+            <code>get_paper("10.1016/j.matlet.2020.129009")</code>
+          </p>
+        </article>
+
+        <article class="tool">
+          <div class="tool-head">
+            <h3><code>facet_counts</code></h3>
+            <span class="tag">facets</span>
+          </div>
+          <p class="sig"><code>facet_counts(field="property", query="", elements=None, journal=None, applications=None)</code></p>
+          <p>
+            Count records per facet value under the same filters as
+            <code>search_records</code>. Fields: <code>property</code>,
+            <code>elements</code>, <code>journal</code>, <code>application</code>,
+            <code>year_histogram</code>, and <code>property_stats</code>.
+          </p>
+          <p class="returns">
+            <strong>Returns:</strong> <code>[{value, count}]</code> for bucket fields;
+            <code>{count, min, max, avg, sum}</code> for <code>property_stats</code>.
+          </p>
+          <p class="example">
+            <strong>Example:</strong>
+            <code>facet_counts(field="application", query="concrete")</code>
+          </p>
+        </article>
+
+        <article class="tool">
+          <div class="tool-head">
+            <h3><code>suggest</code></h3>
+            <span class="tag">autocomplete</span>
+          </div>
+          <p class="sig"><code>suggest(q, limit=8)</code></p>
+          <p>
+            Prefix autocomplete over composition formulas, element symbols, property
+            slugs, and journal slugs. Use it to resolve user input into exact facet
+            values before searching.
+          </p>
+          <p class="returns">
+            <strong>Returns:</strong>
+            <code>{query, formulas, elements, properties, journals}</code>.
+            <code>limit</code> is clamped to 1&ndash;20.
+          </p>
+          <p class="example">
+            <strong>Example:</strong> <code>suggest("ti")</code>
+          </p>
+        </article>
+
+        <article class="tool">
+          <div class="tool-head">
+            <h3><code>props_scatter</code></h3>
+            <span class="tag">aggregate</span>
+          </div>
+          <p class="sig"><code>props_scatter(property_a, property_b, property_c, threshold_a=None, threshold_b=None, threshold_c=None, elements=None, journal=None, applications=None)</code></p>
+          <p>
+            Three-property scatter for materials measured for all three properties.
+            Points outside the 1st/99th percentile on any axis are dropped. When all
+            three thresholds are supplied, points satisfying
+            <code>x &gt;= threshold_a and y &gt;= threshold_b and z &gt;= threshold_c</code>
+            are flagged.
+          </p>
+          <p class="returns">
+            <strong>Returns:</strong>
+            <code>{property_a, property_b, property_c, thresholds, points, bounds, counts}</code>,
+            where each point is <code>[x, y, z, highlighted]</code>.
+          </p>
+          <p class="example">
+            <strong>Example:</strong>
+            <code>props_scatter("glass_transition_temperature", "activation_energy", "crystallization_temperature", 600, 2, 800)</code>
+          </p>
+        </article>
+
+        <article class="tool">
+          <div class="tool-head">
+            <h3><code>gsc_chart</code></h3>
+            <span class="tag">aggregate</span>
+          </div>
+          <p class="sig"><code>gsc_chart(property_a, property_b, elements=None, journal=None, applications=None)</code></p>
+          <p>
+            Two-property composition-family hulls. Materials measured for both
+            properties are grouped by element set; each family carries its points and a
+            smoothed convex hull.
+          </p>
+          <p class="returns">
+            <strong>Returns:</strong>
+            <code>{property_a, property_b, families, total_points}</code>; each family
+            has <code>family</code>, <code>count</code>, <code>points</code>, and
+            <code>hull</code>.
+          </p>
+          <p class="example">
+            <strong>Example:</strong> <code>gsc_chart("youngs_modulus", "hardness")</code>
+          </p>
+        </article>
+
+        <article class="tool">
+          <div class="tool-head">
+            <h3><code>search_literature</code></h3>
+            <span class="tag">external</span>
+          </div>
+          <p class="sig"><code>search_literature(query, limit=8)</code></p>
+          <p>
+            Semantic search over external preprints (arXiv) via Valency. This is a
+            separate corpus from the measurement records; results carry external IDs
+            such as arXiv IDs or DOIs, not <code>record_id</code>s.
+          </p>
+          <p class="returns">
+            <strong>Returns:</strong> <code>{available, results}</code>;
+            <code>available=false</code> when Valency is disabled or no token is
+            configured.
+          </p>
+          <p class="example">
+            <strong>Example:</strong>
+            <code>search_literature("high-entropy alloys", limit=5)</code>
+          </p>
+        </article>
+
+        <article class="tool">
+          <div class="tool-head">
+            <h3><code>literature_trends</code></h3>
+            <span class="tag">external</span>
+          </div>
+          <p class="sig"><code>literature_trends(keyword, category=None)</code></p>
+          <p>Publication counts over time for a keyword, via Valency.</p>
+          <p class="returns">
+            <strong>Returns:</strong> <code>{available, keyword, trend}</code>;
+            <code>available=false</code> without a token.
+          </p>
+          <p class="example">
+            <strong>Example:</strong>
+            <code>literature_trends("high-entropy alloy", category="cond-mat.mtrl-sci")</code>
+          </p>
+        </article>
+      </section>
+
+      <section>
+        <h2>Environment</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">Variable</th>
+                <th scope="col">Default</th>
+                <th scope="col">Purpose</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>OMAT_OPENSEARCH_URL</code></td>
+                <td><code>http://localhost:9200</code></td>
+                <td>OpenSearch endpoint the tools read.</td>
+              </tr>
+              <tr>
+                <td><code>OMAT_VALENCY_BEARER_TOKEN</code></td>
+                <td>&mdash;</td>
+                <td>
+                  Enables <code>search_literature</code> and
+                  <code>literature_trends</code>. Keep it server-side.
+                </td>
+              </tr>
+              <tr>
+                <td><code>OMAT_VALENCY_ENABLED</code></td>
+                <td><code>true</code></td>
+                <td>Set to <code>false</code> to disable literature tools even with a token.</td>
+              </tr>
+              <tr>
+                <td><code>OMAT_VALENCY_MCP_URL</code></td>
+                <td><code>https://mcp.valency.io/</code></td>
+                <td>Valency MCP endpoint.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section>
+        <h2>Design notes</h2>
+        <ul>
+          <li>
+            One OpenSearch document is one measurement property. Paper views group by
+            DOI or PII; cite <code>record_id</code> for numeric claims.
+          </li>
+          <li>
+            The server is the only OpenSearch reader. Clients never get direct index
+            access.
+          </li>
+          <li>
+            There is no application auth. Run the server on a trusted network, and keep
+            it off public ingress until the ALB deployment exists.
+          </li>
+          <li>
+            Context is measurement records, not PDF chunks. There is no embedding or
+            vector store in the search path.
+          </li>
+        </ul>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <span>OMAT-SE MCP server</span>
+      <span>
+        <a href="https://github.com/Jayesh-Dev21/Omat-se/blob/master/apps/mcp/src/omat_mcp/server.py">Source &#8599;</a>
+      </span>
+    </footer>
+  </body>
+</html>

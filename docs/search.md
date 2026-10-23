@@ -63,7 +63,8 @@ There is no application authentication. Admin ingest routes are local operator
 tools; do not expose them through public ingress.
 
 The MCP server (`apps/mcp`) exposes the same semantics as tools by importing
-the same py-core builders, so an agent search and a UI search cannot drift:
+the same py-core builders, so an agent search and a UI search cannot drift. The
+published reference lives at `/mcp/` (source: `docs/mcp/index.html`):
 
 | Tool | Mirrors |
 | --- | --- |

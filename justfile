@@ -83,8 +83,10 @@ openapi:
     {{python}} -c "import json; from omat_api.main import app; print(json.dumps(app.openapi(), indent=2))" > docs/api/openapi.json
 
 docs: openapi
-    @echo "API docs: http://localhost:8080"
-    {{python}} -m http.server 8080 --directory docs/api
+    @echo "Docs: http://localhost:8080"
+    @echo "API:  http://localhost:8080/api/"
+    @echo "MCP:  http://localhost:8080/mcp/"
+    {{python}} -m http.server 8080 --directory docs
 
 # --- Report ------------------------------------------------------------------
 

@@ -1,17 +1,24 @@
 name: docs
 
-# Generate the OpenAPI schema from FastAPI and publish a static API reference.
+# Generate the OpenAPI schema from FastAPI and publish the API + MCP reference.
 #
 # Setup: repository Settings -> Pages -> Build and deployment -> Source:
-# "GitHub Actions". The workflow writes openapi.json next to docs/api/index.html.
+# "GitHub Actions". The site is published as:
+#   /       landing page (docs/index.html)
+#   /api/   Scalar shell + generated openapi.json
+#   /mcp/   MCP server reference (docs/mcp/index.html)
 
 on:
   push:
     branches: [main, master]
     paths:
       - "apps/api/**"
+      - "apps/mcp/**"
       - "packages/py-core/**"
       - "docs/api/**"
+      - "docs/mcp/**"
+      - "docs/index.html"
+      - "docs/site.css"
       - ".github/workflows/docs.yml"
   workflow_dispatch:
 
@@ -43,15 +50,17 @@ jobs:
 
       - name: Build static reference
         run: |
-          mkdir -p _site
+          mkdir -p _site/api _site/mcp
           python - <<'PY'
           import json
           from omat_api.main import app
 
-          with open("_site/openapi.json", "w", encoding="utf-8") as spec:
+          with open("_site/api/openapi.json", "w", encoding="utf-8") as spec:
               json.dump(app.openapi(), spec, indent=2)
           PY
-          cp docs/api/index.html docs/api/favicon.ico docs/api/favicon.svg _site/
+          cp docs/index.html docs/site.css _site/
+          cp docs/api/index.html docs/api/favicon.ico docs/api/favicon.svg _site/api/
+          cp docs/mcp/index.html _site/mcp/
 
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3

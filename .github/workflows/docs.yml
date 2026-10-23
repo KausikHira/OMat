@@ -51,7 +51,7 @@ jobs:
           with open("_site/openapi.json", "w", encoding="utf-8") as spec:
               json.dump(app.openapi(), spec, indent=2)
           PY
-          cp docs/api/index.html docs/api/favicon.ico _site/
+          cp docs/api/index.html docs/api/favicon.ico docs/api/favicon.svg _site/
 
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3

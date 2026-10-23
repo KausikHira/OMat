@@ -14,10 +14,10 @@
   "dependencies": {
     "@omat/api-client": "workspace:*",
     "@tanstack/react-query": "^5.62.7",
-    "next": "15.1.6",
+    "next": "15.5.28",
     "nuqs": "^2.2.3",
-    "react": "19.0.0",
-    "react-dom": "19.0.0",
+    "react": "19.0.6",
+    "react-dom": "19.0.6",
     "zod": "^3.24.1"
   },
   "devDependencies": {

@@ -240,7 +240,9 @@ typecheck/build; a green local run avoids a broken push.
 | --- | --- | --- |
 | `.github/workflows/ci.yml` | push to main/master, PRs, manual | Ruff, pytest, OpenAPI check, Bun typecheck/build |
 | `.github/workflows/deploy-web.yml` | web-related pushes to main/master, manual | Vercel production deploy via CLI |
-| `.github/workflows/docs.yml` | API-related pushes to main/master, manual | Generate OpenAPI and publish to GitHub Pages |
+
+The docs site has no workflow; it deploys through Vercel's Git integration
+(see below and `docs/adr/0002-docs-on-vercel.md`).
 
 ### Vercel (web)
 
@@ -253,9 +255,14 @@ typecheck/build; a green local run avoids a broken push.
 - Required workflow secrets: `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`.
 - Add the deployed Vercel domain (and preview domains) to `OMAT_CORS_ORIGINS`.
 
-### API docs (GitHub Pages)
+### API docs (Vercel)
 
-- Repository **Settings → Pages → Source: GitHub Actions**.
+- Second Vercel project, **Root Directory**: `docs/`, connected to the repo
+  through **Git integration** (no workflow). Enable **"Include files outside
+  the Root Directory"** so the build can `pip install -e` the local API
+  packages.
+- Config lives in `docs/vercel.json`; the build regenerates
+  `docs/api/openapi.json` from FastAPI and serves the directory statically.
 - `docs/api/index.html` is the Scalar shell; the spec is generated from FastAPI.
 - Never hand-edit `openapi.json`; change the pydantic/FastAPI models instead.
 - Local preview: `just docs`.

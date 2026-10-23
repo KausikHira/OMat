@@ -11,8 +11,7 @@ off public ingress.
 
 ```text
 Users
- ├── Vercel ──────────────── Next.js UI (apps/web, SSR)
- ├── GitHub Pages ────────── API + MCP reference (Scalar + static pages)
+ ├── Vercel ──────────────── Next.js UI (apps/web, SSR) + docs site (docs/)
  └── Route 53
        ├── api.<domain>          → CloudFront + WAF → ALB → FastAPI (ECS)
        └── mcp.<domain>          → ALB → MCP server (ECS)
@@ -36,7 +35,7 @@ Ingest: CSV → validate/normalize → JSONL → bulk index → alias swap
 | `packages/py-ingest` | CSV → validated records → index | CLI implemented (`validate`, `index`, `report`) |
 | `apps/mcp` | Agent-facing tools | `search_records`, `get_paper`, `facet_counts`, `suggest`, `props_scatter`, `gsc_chart`, literature tools implemented |
 | `apps/workers` | Async consumers | Idle entry point (phase 2) |
-| `docs/` | Developer docs site: Scalar API reference + MCP tool reference | `/`, `/api`, `/mcp` published by the Pages workflow |
+| `docs/` | Developer docs site: Scalar API reference + MCP tool reference | `/`, `/api`, `/mcp` published by Vercel Git integration (Root Directory `docs/`) |
 | `infra` | Terraform and container placeholders | Root Docker Compose; AWS not provisioned |
 
 The important boundary: **`py-core` owns search semantics**. FastAPI and the MCP
@@ -79,8 +78,8 @@ not in the source and must not be invented.
 
 ## Deployment target
 
-- Vercel for `apps/web` (Next.js, Root Directory `apps/web`)
-- GitHub Pages for the generated API and MCP reference
+- Vercel for `apps/web` (Next.js, Root Directory `apps/web`) and for `docs/`
+  (static reference, Root Directory `docs/`)
 - ECS Fargate for `api`, `mcp`, and later `workers`
 - OpenSearch Service in private subnets, two AZs
 - RDS Postgres, ElastiCache Redis, S3, ECR, Secrets Manager

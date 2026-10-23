@@ -1,0 +1,7 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "installCommand": "python3 -m pip install -e ../packages/py-core -e ../apps/api",
+  "buildCommand": "python3 -c \"import json; from omat_api.main import app; open('api/openapi.json', 'w', encoding='utf-8').write(json.dumps(app.openapi(), indent=2))\"",
+  "outputDirectory": "."
+}

@@ -65,9 +65,10 @@ just dev-api</code></pre>
       <section>
         <h2>Published from the repository</h2>
         <p>
-          <code>.github/workflows/docs.yml</code> generates the schema and publishes
-          this site to GitHub Pages on every push that touches the API, MCP server,
-          or docs sources.
+          This site deploys through Vercel's Git integration. The project is rooted
+          at <code>docs/</code>; its build generates <code>openapi.json</code> from
+          the FastAPI app (<code>docs/vercel.json</code>), so every push that
+          touches the API, MCP server, or docs sources republishes the reference.
         </p>
       </section>
     </main>

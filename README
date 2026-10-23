@@ -4,8 +4,8 @@ Faceted search over materials composition and property measurements.
 
 Live
   Frontend       https://omat-se.vercel.app
-  API reference  https://jayesh-dev21.github.io/Omat-se/api/
-  MCP reference  https://jayesh-dev21.github.io/Omat-se/mcp/
+  API reference  https://omat-se-docs.vercel.app/api/
+  MCP reference  https://omat-se-docs.vercel.app/mcp/
 
 Repository
   apps/api       FastAPI service
@@ -43,8 +43,10 @@ Deploy
     VERCEL_ORG_ID, and VERCEL_PROJECT_ID), not both.
 
   API + MCP reference
-    `.github/workflows/docs.yml` generates `openapi.json` from FastAPI and
-    publishes the site in `docs/` to GitHub Pages: `/` is the landing page,
-    `/api/` is the Scalar reference, and `/mcp/` documents the MCP tools.
-    Enable Settings -> Pages -> Source: GitHub Actions once, then push to
-    `master` or run the workflow manually.
+    A second Vercel project with Root Directory `docs/` publishes the
+    reference site through Git integration: `/` is the landing page, `/api/`
+    is the Scalar reference, and `/mcp/` documents the MCP tools. The build
+    (`docs/vercel.json`) generates `openapi.json` from FastAPI on every
+    deploy. Enable "Include files outside the Root Directory" in the project
+    settings so the local API packages can be installed; there is no
+    workflow to enable.

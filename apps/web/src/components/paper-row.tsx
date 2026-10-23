@@ -44,19 +44,16 @@ export function PaperRow({ paper }: PaperRowProps) {
             </h2>
           </div>
 
-          <div className="ml-auto flex shrink-0 flex-col items-end gap-2">
-            {paper.doiHref ? (
-              <a
-                href={paper.doiHref}
-                target="_blank"
-                rel="noreferrer noopener"
-                className="text-[11px] text-accent underline decoration-accent/40 underline-offset-4 transition-colors hover:decoration-accent"
-              >
-                Read paper ↗
-              </a>
-            ) : null}
-            <PaperChat paper={paper} />
-          </div>
+          {paper.doiHref ? (
+            <a
+              href={paper.doiHref}
+              target="_blank"
+              rel="noreferrer noopener"
+              className="shrink-0 text-[11px] text-accent underline decoration-accent/40 underline-offset-4 transition-colors hover:decoration-accent"
+            >
+              Read paper ↗
+            </a>
+          ) : null}
         </div>
 
         <p
@@ -117,6 +114,9 @@ export function PaperRow({ paper }: PaperRowProps) {
           ) : paper.doi ? (
             <span className="max-w-full truncate">{paper.doi}</span>
           ) : null}
+          <div className="ml-auto shrink-0">
+            <PaperChat paper={paper} />
+          </div>
         </div>
       </article>
     </li>

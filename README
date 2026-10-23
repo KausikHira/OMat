@@ -27,5 +27,19 @@ Local setup
 Requirements: Python 3.11+, Bun, Docker.
 Architecture: docs/architecture.md
 Schema: docs/schema.md
-API reference: docs/api/index.html (published to GitHub Pages)
 License: MIT
+
+Deploy
+  Frontend
+    Create a Vercel project with Root Directory `apps/web` and set
+    NEXT_PUBLIC_API_URL in the project environment variables. Vercel builds
+    with `apps/web/vercel.json`; the install step runs from the repo root so
+    the Bun workspace and `bun.lock` are used. You can deploy through Vercel's
+    Git integration or `.github/workflows/deploy-web.yml` (add VERCEL_TOKEN,
+    VERCEL_ORG_ID, and VERCEL_PROJECT_ID), not both.
+
+  API reference
+    `.github/workflows/docs.yml` generates `openapi.json` from FastAPI and
+    publishes the Scalar shell in `docs/api` to GitHub Pages. Enable
+    Settings -> Pages -> Source: GitHub Actions once, then push to `master`
+    or run the workflow manually.

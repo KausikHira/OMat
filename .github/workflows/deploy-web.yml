@@ -10,7 +10,7 @@ name: deploy-web
 
 on:
   push:
-    branches: [main]
+    branches: [main, master]
     paths:
       - "apps/web/**"
       - "packages/api-client/**"

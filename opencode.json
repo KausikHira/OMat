@@ -1,0 +1,14 @@
+{
+  "mcp": {
+    "servers": {
+      "omat-se": {
+        "type": "local",
+        "command": [
+          "/home/vidit68/Desktop/Omat-se/.venv/bin/python",
+          "-m",
+          "omat_mcp.server"
+        ]
+      }
+    }
+  }
+}

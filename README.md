@@ -5,6 +5,7 @@ A materials knowledge exploration platform integrating composition–property se
 ## Platform and Documentation
 
 - **Frontend:** https://omat-kausik-web.vercel.app/
+- **Demo video (YouTube):** https://www.youtube.com/watch?v=wFv1wCC3lc8
 - **API Reference:** https://omat-se-docs-alpha.vercel.app/api/
 - **MCP Reference:** https://omat-se-docs-alpha.vercel.app/mcp/
 
